@@ -1,0 +1,20 @@
+services:
+  tailscale:
+    image: {{ nas_tailscale_image }}
+    network_mode: host
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file:
+      - ./tailscale.env
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_AUTH_ONCE: "true"
+      TS_HOSTNAME: {{ tailscale_hostname | to_json }}
+      TS_EXTRA_ARGS: "--advertise-tags=tag:nas --ssh=false"
+    volumes:
+      - ./state:/var/lib/tailscale

@@ -1,0 +1,6 @@
+---
+tailnet_policy_file: "{{ role_path }}/../../../tailscale/policy.hujson"
+tailnet_policy_apply: false
+tailnet_policy_replace_existing: false
+# The OAuth credential identifies its own tailnet; no account/domain is needed.
+tailnet_policy_api_url: https://api.tailscale.com

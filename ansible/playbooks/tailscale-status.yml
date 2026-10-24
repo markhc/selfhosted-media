@@ -1,0 +1,116 @@
+---
+- name: Report the deployed NAS Tailscale status
+  hosts: nas
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Find the Tailscale container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - --project-directory
+          - "{{ nas_tailscale_directory | default('/opt/selfhosted/tailscale') }}"
+          - --project-name
+          - selfhosted-tailscale
+          - ps
+          - --all
+          - --quiet
+          - tailscale
+      register: tailscale_container_id
+      changed_when: false
+      check_mode: false
+
+    - name: Require a deployed Tailscale container
+      ansible.builtin.assert:
+        that:
+          - tailscale_container_id.stdout | trim | length > 0
+        fail_msg: No Tailscale container exists in the selfhosted-tailscale Compose project; rerun make deploy-tailscale.
+
+    - name: Inspect the Tailscale container runtime state
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - --format={{ '{{json .State}}' }}
+          - "{{ tailscale_container_id.stdout | trim }}"
+      register: tailscale_container_inspect
+      changed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Parse the container runtime state
+      ansible.builtin.set_fact:
+        tailscale_container_state: "{{ tailscale_container_inspect.stdout | from_json }}"
+        cacheable: false
+      no_log: true
+
+    - name: Read the Tailscale container restart count
+      ansible.builtin.command:
+        argv:
+          - docker
+          - inspect
+          - --format={{ '{{.RestartCount}}' }}
+          - "{{ tailscale_container_id.stdout | trim }}"
+      register: tailscale_container_restarts
+      changed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Explain why the Tailscale container is not running
+      ansible.builtin.fail:
+        msg:
+          status: "{{ tailscale_container_state.Status | default('unknown') }}"
+          exit_code: "{{ tailscale_container_state.ExitCode | default('unknown') }}"
+          restart_count: "{{ tailscale_container_restarts.stdout | default('unknown') | trim }}"
+          oom_killed: "{{ tailscale_container_state.OOMKilled | default(false) }}"
+          runtime_error: "{{ tailscale_container_state.Error | default('') }}"
+      when: not (tailscale_container_state.Running | default(false) | bool)
+
+    - name: Read status from the Tailscale container
+      ansible.builtin.command:
+        argv:
+          - docker
+          - compose
+          - --project-directory
+          - "{{ nas_tailscale_directory | default('/opt/selfhosted/tailscale') }}"
+          - --project-name
+          - selfhosted-tailscale
+          - exec
+          - -T
+          - tailscale
+          - tailscale
+          - status
+          - --json
+      register: tailscale_status_command
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Explain a status command failure without exposing status JSON
+      ansible.builtin.fail:
+        msg: >-
+          Could not read Tailscale status from the deployed container
+          (exit {{ tailscale_status_command.rc | default('unknown') }}):
+          {{ tailscale_status_command.stderr | default('no error detail returned') | trim }}
+      when: tailscale_status_command.rc | default(-1) != 0
+
+    - name: Parse Tailscale status without logging the complete response
+      ansible.builtin.set_fact:
+        tailscale_status: "{{ tailscale_status_command.stdout | from_json }}"
+        cacheable: false
+      no_log: true
+
+    - name: Show enrollment identity
+      ansible.builtin.debug:
+        msg:
+          backend_state: "{{ tailscale_status.BackendState | default('unknown') }}"
+          online: "{{ tailscale_status.Self.Online | default(false) }}"
+          machine: "{{ tailscale_status.Self.HostName | default('unknown') }}"
+          tailnet: >-
+            {{ tailscale_status.CurrentTailnet.Name
+               | default(tailscale_status.MagicDNSSuffix | default('unknown'), true) }}
+          tags: "{{ tailscale_status.Self.Tags | default([]) }}"
+          tailscale_ips: "{{ tailscale_status.TailscaleIPs | default([]) }}"

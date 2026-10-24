@@ -1,0 +1,3 @@
+# Never send credentials, certificates, or runtime state to the image builder.
+*
+!Dockerfile

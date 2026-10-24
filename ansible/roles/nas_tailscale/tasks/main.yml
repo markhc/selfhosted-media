@@ -1,0 +1,101 @@
+---
+- name: Validate the Tailscale hostname
+  ansible.builtin.assert:
+    that:
+      - tailscale_hostname is match('^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$')
+      - nas_tailscale_directory is match('^/[a-zA-Z0-9/_-]+$')
+
+- name: Validate enrollment credentials and existing state
+  ansible.builtin.import_tasks: auth.yml
+
+- name: Inspect host services before starting containerized Tailscale
+  ansible.builtin.service_facts:
+
+- name: Refuse to compete with a native Tailscale daemon
+  ansible.builtin.assert:
+    that:
+      - (ansible_facts.services.get('tailscaled.service', {})).get('state', 'stopped') != 'running'
+      - (ansible_facts.services.get('tailscaled.service', {})).get('status', 'disabled') != 'enabled'
+    fail_msg: Stop and disable native tailscaled and plan state migration before using the Docker deployment.
+
+- name: Inspect the host TUN device
+  ansible.builtin.stat:
+    path: /dev/net/tun
+  register: nas_tailscale_tun
+
+- name: Require the host TUN device
+  ansible.builtin.assert:
+    that:
+      - nas_tailscale_tun.stat.exists
+      - nas_tailscale_tun.stat.ischr | default(false)
+    fail_msg: Enable the Linux TUN device on the NAS before deploying Tailscale.
+
+- name: Create Tailscale directories
+  ansible.builtin.file:
+    path: "{{ nas_tailscale_directory }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  loop:
+    - ''
+    - state
+
+- name: Write Tailscale enrollment credentials
+  ansible.builtin.copy:
+    content: "TS_AUTHKEY={{ nas_tailscale_auth_key }}\n"
+    dest: "{{ nas_tailscale_directory }}/tailscale.env"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  diff: false
+
+- name: Write the Tailscale Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ nas_tailscale_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Tailscale
+  community.docker.docker_compose_v2:
+    project_src: "{{ nas_tailscale_directory }}"
+    project_name: selfhosted-tailscale
+    state: present
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+  no_log: true
+
+- name: Confirm Tailscale enrollment
+  ansible.builtin.import_tasks: ready.yml
+
+- name: Finish enrollment without retaining its credential
+  when:
+    - not ansible_check_mode
+    - nas_tailscale_auth_key | length > 0
+  block:
+    - name: Remove the consumed enrollment key from the NAS environment file
+      ansible.builtin.copy:
+        content: "TS_AUTHKEY=\n"
+        dest: "{{ nas_tailscale_directory }}/tailscale.env"
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      diff: false
+
+    - name: Recreate Tailscale without the enrollment key in its environment
+      community.docker.docker_compose_v2:
+        project_src: "{{ nas_tailscale_directory }}"
+        project_name: selfhosted-tailscale
+        state: present
+        recreate: always
+        wait: true
+        wait_timeout: 120
+      no_log: true
+
+    - name: Verify Tailscale resumes from persistent state without an auth key
+      ansible.builtin.import_tasks: ready.yml

@@ -1,0 +1,12 @@
+---
+- name: Validate or explicitly apply the tailnet policy from the controller
+  hosts: localhost
+  connection: local
+  become: false
+  gather_facts: false
+  vars:
+    ansible_connection: local
+    ansible_become: false
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  roles:
+    - role: tailnet_policy

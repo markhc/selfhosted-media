@@ -1,0 +1,112 @@
+---
+- name: Inspect persistent Tailscale state without reading its contents
+  ansible.builtin.stat:
+    path: "{{ nas_tailscale_directory }}/state/tailscaled.state"
+    get_checksum: false
+    get_mime: false
+  register: nas_tailscale_saved_state
+
+- name: Validate controller enrollment settings
+  ansible.builtin.assert:
+    that:
+      - >-
+        nas_tailscale_api_url == 'https://api.tailscale.com'
+        or nas_tailscale_api_url is match('^http://127\.0\.0\.1:[0-9]+$')
+      - nas_tailscale_auth_key_expiry_seconds | int >= 300
+      - nas_tailscale_auth_key_expiry_seconds | int <= 86400
+      - nas_tailscale_auth_key_tags == ['tag:nas']
+    fail_msg: Enrollment keys must be short-lived, restricted to tag:nas, and requested only from Tailscale or a loopback test server.
+    quiet: true
+
+- name: Require the controller OAuth credential for a fresh NAS
+  ansible.builtin.assert:
+    that:
+      - tailscale_oauth_client_id | default('') | length > 0
+      - tailscale_oauth_client_secret | default('') | length > 0
+    fail_msg: >-
+      No persistent Tailscale state exists. Set tailscale_oauth_client_id and
+      tailscale_oauth_client_secret in the Ansible Vault so Ansible can create a one-off enrollment key.
+    quiet: true
+  when: not (nas_tailscale_saved_state.stat.isreg | default(false))
+  no_log: true
+
+- name: Create a one-off enrollment key from the controller
+  when:
+    - not (nas_tailscale_saved_state.stat.isreg | default(false))
+    - not ansible_check_mode
+  block:
+    - name: Exchange the OAuth credential for a scoped access token
+      ansible.builtin.uri:
+        url: "{{ nas_tailscale_api_url }}/api/v2/oauth/token"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          grant_type: client_credentials
+          client_id: "{{ tailscale_oauth_client_id }}"
+          client_secret: "{{ tailscale_oauth_client_secret }}"
+          scope: auth_keys
+        follow_redirects: none
+        use_netrc: false
+        return_content: true
+        timeout: 30
+      delegate_to: localhost
+      become: false
+      register: nas_tailscale_oauth_token
+      failed_when: false
+      changed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Stop if the OAuth credential cannot create auth keys
+      ansible.builtin.fail:
+        msg: OAuth authentication failed; check the credential, auth_keys scope, and tag:nas restriction.
+      when: >-
+        nas_tailscale_oauth_token.status | default(-1) != 200
+        or (nas_tailscale_oauth_token.json | default({})).get('access_token', '') | length == 0
+
+    - name: Request a short-lived one-off NAS auth key
+      ansible.builtin.uri:
+        url: "{{ nas_tailscale_api_url }}/api/v2/tailnet/-/keys"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ nas_tailscale_oauth_token.json.access_token }}"
+          Content-Type: application/json
+        body_format: json
+        body:
+          keyType: auth
+          description: selfhosted media NAS enrollment
+          expirySeconds: "{{ nas_tailscale_auth_key_expiry_seconds | int }}"
+          capabilities:
+            devices:
+              create:
+                reusable: false
+                ephemeral: false
+                preauthorized: true
+                tags: "{{ nas_tailscale_auth_key_tags }}"
+        follow_redirects: none
+        unredirected_headers:
+          - Authorization
+        use_netrc: false
+        return_content: true
+        timeout: 30
+      delegate_to: localhost
+      become: false
+      register: nas_tailscale_generated_key
+      failed_when: false
+      changed_when: nas_tailscale_generated_key.status | default(-1) == 200
+      check_mode: false
+      no_log: true
+
+    - name: Stop if a valid enrollment key was not created
+      ansible.builtin.fail:
+        msg: Could not create a one-off tag:nas auth key; check the OAuth client's scope and tag restriction.
+      when: >-
+        nas_tailscale_generated_key.status | default(-1) != 200
+        or (nas_tailscale_generated_key.json | default({})).get('key', '')
+        is not match('^tskey-auth-[A-Za-z0-9_-]+$')
+
+    - name: Hold the generated key only for this enrollment run
+      ansible.builtin.set_fact:
+        nas_tailscale_auth_key: "{{ nas_tailscale_generated_key.json.key }}"
+        cacheable: false
+      no_log: true

@@ -1,0 +1,180 @@
+---
+- name: Require a controller-only execution context
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == 'localhost'
+      - ansible_connection == 'local'
+      - not (ansible_become | default(false) | bool)
+      - >-
+        tailnet_policy_api_url == 'https://api.tailscale.com'
+        or tailnet_policy_api_url is match('^http://127\.0\.0\.1:[0-9]+$')
+    fail_msg: Run the policy playbook on localhost without sudo; only the Tailscale API or a loopback test server is allowed.
+
+- name: Read the desired policy without logging its contents
+  ansible.builtin.set_fact:
+    tailnet_policy_candidate: "{{ lookup('ansible.builtin.file', tailnet_policy_file, rstrip=false) }}"
+    cacheable: false
+  no_log: true
+
+- name: Require an object-shaped candidate policy
+  ansible.builtin.fail:
+    msg: The policy file must contain a HuJSON object, not an array of tests or an empty file.
+  when: >-
+    not (tailnet_policy_candidate is match('(?s)^(?:\s|//[^\n]*(?:\n|$)|/\*.*?\*/)*\{'))
+
+- name: Require the controller policy credential
+  ansible.builtin.assert:
+    that:
+      - tailscale_oauth_client_id | default('') | length > 0
+      - tailscale_oauth_client_secret | default('') | length > 0
+    fail_msg: Set tailscale_oauth_client_id and tailscale_oauth_client_secret in the Ansible Vault.
+    quiet: true
+  no_log: true
+
+- name: Exchange OAuth credentials for a short-lived policy API token
+  ansible.builtin.uri:
+    url: "{{ tailnet_policy_api_url }}/api/v2/oauth/token"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: client_credentials
+      client_id: "{{ tailscale_oauth_client_id }}"
+      client_secret: "{{ tailscale_oauth_client_secret }}"
+      scope: policy_file devices:posture_attributes devices:core:read
+    follow_redirects: none
+    use_netrc: false
+    return_content: true
+    timeout: 30
+  register: tailnet_policy_token
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Stop if the policy credential cannot authenticate
+  ansible.builtin.fail:
+    msg: OAuth authentication failed; check the controller credential and policy scopes. API details are withheld.
+  when: >-
+    tailnet_policy_token.status | default(-1) != 200
+    or (tailnet_policy_token.json | default({})).get('access_token', '') | length == 0
+
+- name: Read the live policy and its concurrency token
+  ansible.builtin.uri:
+    url: "{{ tailnet_policy_api_url }}/api/v2/tailnet/-/acl"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ tailnet_policy_token.json.access_token }}"
+      Accept: application/hujson
+    follow_redirects: none
+    unredirected_headers:
+      - Authorization
+    use_netrc: false
+    return_content: true
+    timeout: 30
+  register: tailnet_policy_current
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Stop if the current policy or its version cannot be read
+  ansible.builtin.fail:
+    msg: Could not read the current policy and ETag; check policy-read permissions. API details are withheld.
+  when: >-
+    tailnet_policy_current.status | default(-1) != 200
+    or tailnet_policy_current.etag | default('') | length == 0
+    or tailnet_policy_current.content | default('') | trim | length == 0
+
+- name: Validate the candidate and its policy tests without applying it
+  ansible.builtin.uri:
+    url: "{{ tailnet_policy_api_url }}/api/v2/tailnet/-/acl/validate"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ tailnet_policy_token.json.access_token }}"
+      Content-Type: application/hujson
+    body_format: raw
+    body: "{{ tailnet_policy_candidate }}"
+    follow_redirects: none
+    unredirected_headers:
+      - Authorization
+    use_netrc: false
+    return_content: true
+    timeout: 30
+  register: tailnet_policy_validation
+  failed_when: false
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+# Validation can return HTTP 200 with test failures. Fail closed on nonempty
+# error/test responses, rather than trusting the HTTP status alone.
+- name: Stop if policy validation or its tests failed
+  ansible.builtin.fail:
+    msg: Policy validation or tests failed; review the candidate in the Tailscale policy editor. API details are withheld.
+  when: >-
+    tailnet_policy_validation.status | default(-1) != 200
+    or not (tailnet_policy_validation.content | default('') | trim in ['', '{}']
+    or tailnet_policy_validation.json | default(none) == {})
+
+- name: Determine whether a policy update is needed
+  ansible.builtin.set_fact:
+    tailnet_policy_needs_update: >-
+      {{ (tailnet_policy_current.content | trim) != (tailnet_policy_candidate | trim) }}
+    cacheable: false
+  no_log: true
+
+- name: Report a redacted policy preview
+  ansible.builtin.debug:
+    msg: >-
+      Candidate validated. {{ 'The policy differs from the live policy.' if tailnet_policy_needs_update
+      else 'The live policy already matches; no update is needed.' }}
+      {{ 'Preview only; no policy was changed.' if (ansible_check_mode or not (tailnet_policy_apply | bool))
+      else 'Apply requested; conditional update protection is enabled.' }}
+  changed_when: tailnet_policy_needs_update and ansible_check_mode
+
+- name: Apply a validated policy only with explicit authorization
+  when:
+    - tailnet_policy_apply | bool
+    - not ansible_check_mode
+    - tailnet_policy_needs_update
+  block:
+    - name: Conditionally replace the policy without overwriting unreviewed changes
+      ansible.builtin.uri:
+        url: "{{ tailnet_policy_api_url }}/api/v2/tailnet/-/acl"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ tailnet_policy_token.json.access_token }}"
+          Accept: application/hujson
+          Content-Type: application/hujson
+          If-Match: >-
+            {{ tailnet_policy_current.etag if (tailnet_policy_replace_existing | bool) else '"ts-default"' }}
+        body_format: raw
+        body: "{{ tailnet_policy_candidate }}"
+        follow_redirects: none
+        unredirected_headers:
+          - Authorization
+        use_netrc: false
+        return_content: true
+        timeout: 30
+      register: tailnet_policy_update
+      failed_when: false
+      changed_when: tailnet_policy_update.status | default(-1) == 200
+      no_log: true
+
+    - name: Refuse a non-default or concurrently modified policy
+      ansible.builtin.fail:
+        msg: >-
+          Policy not changed: it is non-default or was modified concurrently.
+          Review the live policy before rerunning. Replacing a non-default policy
+          requires tailnet_policy_replace_existing=true as well as tailnet_policy_apply=true.
+          Concurrent changes are never retried automatically.
+      when: tailnet_policy_update.status | default(-1) == 412
+
+    - name: Stop if the policy update failed
+      ansible.builtin.fail:
+        msg: Policy update failed; no automatic retry was attempted. Check permissions and policy tests. API details are withheld.
+      when: tailnet_policy_update.status | default(-1) != 200
+
+    - name: Confirm the policy update without printing its contents
+      ansible.builtin.debug:
+        msg: Tailnet policy applied successfully; tag definitions and access rules are now configured.

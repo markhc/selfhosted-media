@@ -1,0 +1,38 @@
+---
+- name: Configure the media infrastructure
+  hosts: nas
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Refuse a deployment in check mode
+      ansible.builtin.assert:
+        that:
+          - not ansible_check_mode
+        fail_msg: >-
+          Deployment was started with --check, so no containers would be created.
+          Use make check for validation and rerun the deployment without check mode.
+      tags:
+        - always
+
+  roles:
+    - role: docker_runtime
+      when: >-
+        (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool
+        or (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool
+      tags:
+        - tailscale
+        - web_stack
+
+    - role: nas_tailscale
+      when: (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool
+      tags:
+        - tailscale
+
+    - role: web_stack
+      when: >-
+        (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool
+      tags:
+        - web_stack

@@ -1,0 +1,38 @@
+# Managed by Ansible. No service publishes ports through Docker's firewall rules.
+services:
+{% if web_stack_caddy_enabled %}
+  caddy:
+    image: selfhosted/caddy-cloudflare:{{ web_stack_caddy_version }}-{{ web_stack_cloudflare_version }}
+    build:
+      context: ./caddy
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./caddy/cloudflare.env
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+{% endif %}
+{% if web_stack_thelounge_enabled %}
+  thelounge:
+    image: {{ web_stack_thelounge_image }}
+    network_mode: host
+    restart: unless-stopped
+    user: "1000:1000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          require('http').get('http://127.0.0.1:{{ web_stack_thelounge_port }}/',
+          r => { r.resume(); process.exit(r.statusCode === 200 ? 0 : 1); })
+          .on('error', () => process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    volumes:
+      - ./thelounge:/var/opt/thelounge
+{% endif %}

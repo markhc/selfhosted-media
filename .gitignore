@@ -1,0 +1,9 @@
+.ansible/
+.env
+.venv/
+.vault-password
+*.retry
+__pycache__/
+
+# Each operator keeps connection details and service selections locally.
+ansible/inventories/local/

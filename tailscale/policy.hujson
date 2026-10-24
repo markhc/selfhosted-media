@@ -1,0 +1,17 @@
+{
+  // Only tailnet administrators may reach or assign the NAS identity.
+  "tagOwners": {
+    "tag:nas": ["autogroup:admin"],
+  },
+
+  "grants": [
+    {
+      "src": ["autogroup:admin"],
+      "dst": ["tag:nas"],
+      "ip": ["tcp:443"],
+    },
+  ],
+
+  // No Tailscale SSH server is enabled in this deployment.
+  "ssh": [],
+}

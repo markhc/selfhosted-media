@@ -1,0 +1,17 @@
+{
+	# Never create a wildcard HTTP listener, including automatic redirects.
+	auto_https disable_redirects
+	admin localhost:2019
+}
+
+{% if web_stack_thelounge_enabled %}
+https://{{ thelounge_hostname }} {
+	bind {{ web_stack_tailscale_ip.stdout | trim }}{{ (' ' ~ web_stack_lan_ip) if web_stack_lan_ip else '' }}
+	tls {
+		ca {{ web_stack_acme_ca }}
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1 1.0.0.1
+	}
+	reverse_proxy 127.0.0.1:{{ web_stack_thelounge_port }}
+}
+{% endif %}

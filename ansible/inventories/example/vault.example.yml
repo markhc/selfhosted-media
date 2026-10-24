@@ -1,0 +1,12 @@
+---
+# This template contains no secrets. `make vault-init` copies it to the ignored
+# local inventory and encrypts the complete file before opening it for editing.
+
+# One controller-only OAuth credential manages policy and creates one-off NAS
+# enrollment keys. It must have the policy scopes and tag:nas-restricted
+# auth_keys write scope documented in the README.
+tailscale_oauth_client_id: ""
+tailscale_oauth_client_secret: ""
+
+# Required whenever Caddy is enabled, including later certificate renewals.
+web_stack_cloudflare_api_token: ""

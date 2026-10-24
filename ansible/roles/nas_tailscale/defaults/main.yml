@@ -1,0 +1,8 @@
+---
+nas_tailscale_directory: /opt/selfhosted/tailscale
+nas_tailscale_image: tailscale/tailscale:v1.104.2
+nas_tailscale_auth_key: ""
+nas_tailscale_api_url: https://api.tailscale.com
+nas_tailscale_auth_key_expiry_seconds: 600
+nas_tailscale_auth_key_tags:
+  - tag:nas
