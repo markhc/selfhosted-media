@@ -34,6 +34,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Tailscale](docs/services/tailscale.md) | `tailscale` | Every host | Private network enrollment and access |
 | [Caddy](docs/services/caddy.md) | `caddy` | NAS | Private HTTPS reverse proxy with DNS-01 certificates |
 | [The Lounge](docs/services/thelounge.md) | `thelounge` | NAS | Private web IRC client |
+| [Audiobookshelf](docs/services/audiobookshelf.md) | `audiobookshelf` | NAS | Private audiobook and podcast server |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
 Enable each service with `selfhosted_services.<key>.enabled` in the local

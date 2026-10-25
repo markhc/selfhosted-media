@@ -1,0 +1,25 @@
+---
+# Caddy skips the reload when the adapted configuration is unchanged.
+- name: Reload the Caddy configuration
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ caddy_directory }}"
+      - --project-name
+      - selfhosted-caddy
+      - exec
+      - -T
+      - caddy
+      - caddy
+      - reload
+      - --config
+      - /etc/caddy/Caddyfile
+      - --adapter
+      - caddyfile
+  register: caddy_reload
+  until: caddy_reload.rc == 0
+  retries: 5
+  delay: 2
+  changed_when: false

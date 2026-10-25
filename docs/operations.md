@@ -10,18 +10,30 @@ Disabled services are skipped, not uninstalled. Turning off a
 service but leaves any existing deployment, data, and timers in place; stop
 them explicitly with Compose on the host if they were already deployed.
 
-- If Caddy remains enabled while The Lounge is disabled, Compose removes the old
-  Lounge container but preserves its data.
-- Disabling both web services skips that project entirely; explicitly stop the
-  project if it was already deployed.
+- Every service is a separate Compose project named `selfhosted-<service>` in
+  `/opt/selfhosted/<service>`, so disabling one never touches another.
+- Disabling a web service leaves its container and its Caddy site running. To
+  remove it, stop its project, delete
+  `/opt/selfhosted/caddy/conf/sites/<service>.caddy`, and run
+  `make deploy-caddy` to reload Caddy.
 - Disabling ZNC leaves an existing bouncer container and renewal timer running.
+
+For example, to stop and unpublish Audiobookshelf while keeping its data:
+
+```bash
+sudo docker compose --project-directory /opt/selfhosted/audiobookshelf \
+  --project-name selfhosted-audiobookshelf down
+sudo rm /opt/selfhosted/caddy/conf/sites/audiobookshelf.caddy
+```
 
 ## Persistent data and backups
 
 | Path | Contents |
 | --- | --- |
 | `/opt/selfhosted/tailscale/state` | Tailscale node state |
-| `/opt/selfhosted/web/` | Lounge accounts/history/uploads, Caddy certificates and ACME accounts |
+| `/opt/selfhosted/caddy/` | Caddy certificates, ACME accounts, and published sites |
+| `/opt/selfhosted/thelounge/data` | Lounge accounts, history, and uploads |
+| `/opt/selfhosted/audiobookshelf/` | Audiobookshelf database and metadata |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 
 Back these up securely; do not commit or delete them on redeployment. Keep the

@@ -4,6 +4,13 @@
   become: true
   gather_facts: true
 
+  vars:
+    # Each service role is tagged with its selection key.
+    selfhosted_selected: >-
+      {{ (selfhosted_services | default({})) | dict2items
+      | selectattr('value.enabled', 'defined') | selectattr('value.enabled', 'equalto', true)
+      | map(attribute='key') | list }}
+
   pre_tasks:
     - name: Refuse a deployment in check mode
       ansible.builtin.assert:
@@ -15,35 +22,47 @@
       tags:
         - always
 
+    - name: Validate the service selection
+      ansible.builtin.assert:
+        that:
+          - (selfhosted_services | default({})) is mapping
+          - >-
+            (selfhosted_services | default({})) | dict2items | map(attribute='value')
+            | map(attribute='enabled', default=false) | map('type_debug') | unique | difference(['bool'])
+            | length == 0
+        fail_msg: Set every selfhosted_services.<name>.enabled to true or false.
+      tags:
+        - always
+
   roles:
     - role: docker_runtime
       when: >-
-        (('all' in ansible_run_tags or 'tailscale' in ansible_run_tags)
-        and (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool)
-        or (('all' in ansible_run_tags or 'web_stack' in ansible_run_tags) and 'nas' in group_names and (
-        (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
-        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool))
-        or (('all' in ansible_run_tags or 'znc' in ansible_run_tags)
-        and (selfhosted_services | default({})).get('znc', {}).get('enabled', false) | bool)
+        selfhosted_selected | length > 0
+        and ('all' in ansible_run_tags or selfhosted_selected | intersect(ansible_run_tags) | length > 0)
       tags:
-        - tailscale
-        - web_stack
-        - znc
+        - always
 
     - role: nas_tailscale
-      when: (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool
+      when: "'tailscale' in selfhosted_selected"
       tags:
         - tailscale
 
-    - role: web_stack
-      when: >-
-        'nas' in group_names and (
-        (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
-        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool)
+    - role: caddy
+      when: "'caddy' in selfhosted_selected"
       tags:
-        - web_stack
+        - caddy
+
+    - role: thelounge
+      when: "'thelounge' in selfhosted_selected"
+      tags:
+        - thelounge
+
+    - role: audiobookshelf
+      when: "'audiobookshelf' in selfhosted_selected"
+      tags:
+        - audiobookshelf
 
     - role: znc
-      when: (selfhosted_services | default({})).get('znc', {}).get('enabled', false) | bool
+      when: "'znc' in selfhosted_selected"
       tags:
         - znc

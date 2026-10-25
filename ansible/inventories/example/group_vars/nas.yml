@@ -6,8 +6,21 @@ selfhosted_services:
     enabled: true
   thelounge:
     enabled: true
+  audiobookshelf:
+    enabled: true
   znc:
     enabled: false
 
 # This becomes the NAS machine name in MagicDNS.
 tailscale_hostname: media-nas
+
+# Audiobookshelf media folders. Each existing NAS directory appears inside the
+# container at /media/<name>; add libraries in the web UI using those paths.
+# Libraries are read-only unless read_only is false (podcast downloads, uploads).
+audiobookshelf_libraries: []
+# audiobookshelf_libraries:
+#   - name: audiobooks
+#     path: /srv/media/audiobooks
+#   - name: podcasts
+#     path: /srv/media/podcasts
+#     read_only: false

@@ -1,0 +1,35 @@
+# Managed by Ansible. Audiobookshelf listens on loopback only, behind Caddy.
+name: selfhosted-audiobookshelf
+services:
+  audiobookshelf:
+    image: {{ audiobookshelf_image }}
+    network_mode: host
+    restart: unless-stopped
+    user: "{{ audiobookshelf_uid }}:{{ audiobookshelf_gid }}"
+    environment:
+      HOST: 127.0.0.1
+      PORT: "{{ audiobookshelf_port }}"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          require('http').get('http://127.0.0.1:{{ audiobookshelf_port }}/healthcheck',
+          r => { r.resume(); process.exit(r.statusCode === 200 ? 0 : 1); })
+          .on('error', () => process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    volumes:
+      - ./config:/config
+      - ./metadata:/metadata
+{% for library in audiobookshelf_libraries %}
+      - type: bind
+        source: {{ library.path | replace('$', '$$') | to_json }}
+        target: /media/{{ library.name }}
+        read_only: {{ library.read_only | default(true) | bool | to_json }}
+        bind:
+          create_host_path: false
+{% endfor %}

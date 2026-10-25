@@ -53,7 +53,8 @@ ignored by Git because it can identify private infrastructure.
 
 When upgrading an existing vault, replace `nas_tailscale_auth_key` and the old
 `tailnet_policy_client_*` values with the single `tailscale_oauth_client_id` and
-`tailscale_oauth_client_secret` pair.
+`tailscale_oauth_client_secret` pair. Deployments from the former combined web
+stack must follow [Migrate from the combined web stack](operations.md#migrate-from-the-combined-web-stack).
 
 ## Select services
 
@@ -68,11 +69,16 @@ selfhosted_services:
     enabled: true
   thelounge:
     enabled: true
+  audiobookshelf:
+    enabled: true
   znc:
     enabled: false
 ```
 
-Set a service to `false` to skip it without changing the playbook. Review each
+Set a service to `false` to skip it without changing the playbook. Values must
+be YAML booleans (`true`/`false`). A service runs on every host whose
+group or host variables enable it, so keep NAS and bouncer selections in their
+own group files. Review each
 selected service's guide for its prerequisites and dependencies before
 deploying; for example, the web services require the
 [Caddy DNS steps](services/caddy.md#set-up-private-https). Disabling a service
@@ -87,13 +93,20 @@ Deploy all services enabled in the local inventory:
 make deploy
 ```
 
-Focused targets deploy a subset:
+Deploy one service, plus Docker, with `make deploy-<service>`, where
+`<service>` is its selection key:
 
-| Target | Deploys |
-| --- | --- |
-| `make deploy-tailscale` | Docker and Tailscale only |
-| `make deploy-web` | Docker, Caddy, and The Lounge only (no Tailscale auth key is needed) |
-| `make deploy-znc` | Docker and selected ZNC instances only |
+```bash
+make deploy-tailscale
+make deploy-caddy
+make deploy-audiobookshelf
+```
+
+Each service is its own Ansible role and Docker Compose project under
+`/opt/selfhosted/<service>`. Web services such as The Lounge and
+Audiobookshelf require Caddy to be deployed first; `make deploy` orders this
+automatically. Only `deploy-tailscale` on a host without Tailscale state needs
+to create an enrollment key.
 
 Append `ASK_BECOME_PASS=1` to a target if sudo requires a password. Initial
 enrollment should use LAN SSH, not a Tailscale connection that may be

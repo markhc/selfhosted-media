@@ -185,7 +185,7 @@ Enabling this mode accepts the [Let's Encrypt subscriber terms](https://letsencr
        # Keep the existing savebuff_password and users here too.
    ```
 
-   This token is independent of `web_stack_cloudflare_api_token`; Caddy does
+   This token is independent of `caddy_cloudflare_api_token`; Caddy does
    not need to be selected. Only this bouncer's token is copied to its private
    `acme/cloudflare.ini` (mode `0600`). It is never included in Compose,
    environment variables, image builds, process arguments, or ZNC mounts.

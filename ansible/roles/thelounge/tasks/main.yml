@@ -1,0 +1,57 @@
+---
+- name: Validate The Lounge configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Create The Lounge deployment directory
+  ansible.builtin.file:
+    path: "{{ thelounge_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Create The Lounge data directory
+  ansible.builtin.file:
+    path: "{{ thelounge_directory }}/data"
+    state: directory
+    owner: '1000'
+    group: '1000'
+    mode: '0700'
+
+- name: Write The Lounge configuration
+  ansible.builtin.template:
+    src: config.js.j2
+    dest: "{{ thelounge_directory }}/data/config.js"
+    owner: '1000'
+    group: '1000'
+    mode: '0600'
+  register: thelounge_config
+
+- name: Write The Lounge Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ thelounge_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge The Lounge
+  community.docker.docker_compose_v2:
+    project_src: "{{ thelounge_directory }}"
+    project_name: selfhosted-thelounge
+    state: present
+    recreate: "{{ 'always' if thelounge_config is changed else 'auto' }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+
+- name: Publish The Lounge through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: thelounge
+    caddy_site_hostname: "{{ thelounge_hostname }}"
+    caddy_site_upstream: "127.0.0.1:{{ thelounge_port }}"
+  when: not ansible_check_mode

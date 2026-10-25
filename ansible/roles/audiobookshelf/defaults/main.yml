@@ -1,0 +1,9 @@
+---
+audiobookshelf_directory: /opt/selfhosted/audiobookshelf
+audiobookshelf_image: ghcr.io/advplyr/audiobookshelf:2.37.2
+audiobookshelf_port: 13378
+# The container user must be able to read (and, for writable libraries, write) the media.
+audiobookshelf_uid: 1000
+audiobookshelf_gid: 1000
+# Each entry bind-mounts an existing host directory at /media/<name> in the container.
+audiobookshelf_libraries: []

@@ -1,0 +1,4 @@
+---
+thelounge_directory: /opt/selfhosted/thelounge
+thelounge_image: ghcr.io/thelounge/thelounge:4.5.2
+thelounge_port: 9000

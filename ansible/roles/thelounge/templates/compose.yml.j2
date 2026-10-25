@@ -1,0 +1,23 @@
+# Managed by Ansible. The Lounge listens on loopback only, behind Caddy.
+name: selfhosted-thelounge
+services:
+  thelounge:
+    image: {{ thelounge_image }}
+    network_mode: host
+    restart: unless-stopped
+    user: "1000:1000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          require('http').get('http://127.0.0.1:{{ thelounge_port }}/',
+          r => { r.resume(); process.exit(r.statusCode === 200 ? 0 : 1); })
+          .on('error', () => process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    volumes:
+      - ./data:/var/opt/thelounge

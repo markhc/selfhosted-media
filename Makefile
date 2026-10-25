@@ -16,16 +16,14 @@ VAULT_ARGS = $(if $(wildcard $(VAULT_PASSWORD_FILE)),--vault-password-file $(VAU
 BECOME_ARGS = $(if $(filter 1 true yes,$(ASK_BECOME_PASS)),--ask-become-pass,)
 POLICY_FILE_ARG = $(if $(POLICY_FILE),--extra-vars tailnet_policy_file=$(POLICY_FILE),)
 
-.PHONY: help configure setup inventory vault-init vault-edit deploy deploy-tailscale deploy-web deploy-znc \
+.PHONY: help configure setup inventory vault-init vault-edit deploy \
 	tailscale-status policy-preview policy-apply policy-replace require-apply-mode check syntax lint test clean
 
 help:
 	@echo "Common targets:"
 	@echo "  make configure         Install tools, create local inventory, and initialize the vault"
 	@echo "  make deploy            Deploy every service enabled in the local inventory"
-	@echo "  make deploy-tailscale  Deploy only Docker and Tailscale"
-	@echo "  make deploy-web        Deploy only Docker, Caddy, and The Lounge"
-	@echo "  make deploy-znc        Deploy only Docker and selected ZNC instances"
+	@echo "  make deploy-<service>  Deploy only Docker and one selected service (e.g. deploy-caddy)"
 	@echo "  make tailscale-status  Show selected hosts' enrollment state and active tailnet"
 	@echo "  make vault-edit        Edit encrypted deployment credentials"
 	@echo "  make policy-preview    Validate and preview the tailnet policy"
@@ -75,26 +73,15 @@ deploy: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
 	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) $(BECOME_ARGS) --extra-vars @$(VAULT_FILE) \
 		ansible/playbooks/site.yml $(ANSIBLE_ARGS)
 
-deploy-tailscale: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
+# Each service role is tagged with its selfhosted_services key.
+deploy-%: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
 	@$(MAKE) --no-print-directory require-apply-mode
 	@$(MAKE) --no-print-directory require-vault
 	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) $(BECOME_ARGS) --extra-vars @$(VAULT_FILE) \
-		--tags tailscale ansible/playbooks/site.yml $(ANSIBLE_ARGS)
-
-deploy-web: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
-	@$(MAKE) --no-print-directory require-apply-mode
-	@$(MAKE) --no-print-directory require-vault
-	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) $(BECOME_ARGS) --extra-vars @$(VAULT_FILE) \
-		--tags web_stack ansible/playbooks/site.yml $(ANSIBLE_ARGS)
+		--tags $* ansible/playbooks/site.yml $(ANSIBLE_ARGS)
 
 tailscale-status: $(ANSIBLE_PLAYBOOK)
 	$(ANSIBLE_PLAYBOOK) $(BECOME_ARGS) ansible/playbooks/tailscale-status.yml $(ANSIBLE_ARGS)
-
-deploy-znc: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
-	@$(MAKE) --no-print-directory require-apply-mode
-	@$(MAKE) --no-print-directory require-vault
-	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) $(BECOME_ARGS) --extra-vars @$(VAULT_FILE) \
-		--tags znc ansible/playbooks/site.yml $(ANSIBLE_ARGS)
 
 policy-preview: $(ANSIBLE_PLAYBOOK)
 	@$(MAKE) --no-print-directory require-vault

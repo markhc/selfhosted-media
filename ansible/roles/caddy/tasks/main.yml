@@ -1,0 +1,126 @@
+---
+- name: Validate the Caddy configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Find containers from the former combined web stack
+  ansible.builtin.command:
+    argv:
+      - docker
+      - ps
+      - --all
+      - --quiet
+      - --filter
+      - label=com.docker.compose.project=selfhosted-web
+  register: caddy_legacy_containers
+  changed_when: false
+  check_mode: false
+
+- name: Require migration from the combined web stack
+  ansible.builtin.assert:
+    that:
+      - caddy_legacy_containers.stdout | trim == ''
+    fail_msg: >-
+      The former selfhosted-web project still has containers that would conflict
+      with the per-service projects. Follow the migration steps in docs/operations.md.
+
+- name: Discover the host's Tailscale IPv4 address
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ nas_tailscale_directory | default('/opt/selfhosted/tailscale') }}"
+      - --project-name
+      - selfhosted-tailscale
+      - exec
+      - -T
+      - tailscale
+      - tailscale
+      - ip
+      - -4
+  register: caddy_tailscale_ip
+  changed_when: false
+  check_mode: false
+
+- name: Require an enrolled host
+  ansible.builtin.assert:
+    that:
+      - caddy_tailscale_ip.stdout | trim is match('^100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}$')
+    fail_msg: Enroll the host into Tailscale before deploying Caddy.
+
+- name: Create Caddy directories
+  ansible.builtin.file:
+    path: "{{ caddy_directory }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  loop:
+    - ""
+    - build
+    - conf
+    - conf/sites
+    - data
+    - config
+
+- name: Write the Caddy build definition
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: "{{ caddy_directory }}/build/Dockerfile"
+    owner: root
+    group: root
+    mode: '0644'
+  register: caddy_build
+
+- name: Exclude everything but the Dockerfile from the build context
+  ansible.builtin.copy:
+    src: caddy.dockerignore
+    dest: "{{ caddy_directory }}/build/.dockerignore"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Write the Caddy configuration
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ caddy_directory }}/conf/Caddyfile"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Write the Cloudflare token
+  ansible.builtin.copy:
+    content: "CLOUDFLARE_API_TOKEN={{ caddy_cloudflare_api_token }}\n"
+    dest: "{{ caddy_directory }}/cloudflare.env"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  diff: false
+  register: caddy_cloudflare_token
+
+- name: Write the Caddy Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ caddy_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Caddy
+  community.docker.docker_compose_v2:
+    project_src: "{{ caddy_directory }}"
+    project_name: selfhosted-caddy
+    state: present
+    build: "{{ 'always' if caddy_build is changed else 'policy' }}"
+    recreate: "{{ 'always' if caddy_cloudflare_token is changed else 'auto' }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+  no_log: true
+
+# The configuration directory is mounted, so changes apply without a restart.
+- name: Apply the Caddy configuration
+  ansible.builtin.import_tasks: reload.yml
+  when: not ansible_check_mode

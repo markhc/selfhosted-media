@@ -1,0 +1,70 @@
+---
+- name: Validate the Audiobookshelf configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect Audiobookshelf library directories
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ audiobookshelf_libraries }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: audiobookshelf_library_stats
+
+- name: Require existing Audiobookshelf library directories
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      Library {{ item.item.name }} must point to an existing directory;
+      it is never created automatically.
+  loop: "{{ audiobookshelf_library_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Create the Audiobookshelf deployment directory
+  ansible.builtin.file:
+    path: "{{ audiobookshelf_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Create Audiobookshelf data directories
+  ansible.builtin.file:
+    path: "{{ audiobookshelf_directory }}/{{ item }}"
+    state: directory
+    owner: "{{ audiobookshelf_uid }}"
+    group: "{{ audiobookshelf_gid }}"
+    mode: '0700'
+  loop:
+    - config
+    - metadata
+
+- name: Write the Audiobookshelf Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ audiobookshelf_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Audiobookshelf
+  community.docker.docker_compose_v2:
+    project_src: "{{ audiobookshelf_directory }}"
+    project_name: selfhosted-audiobookshelf
+    state: present
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+
+- name: Publish Audiobookshelf through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: audiobookshelf
+    caddy_site_hostname: "{{ audiobookshelf_hostname }}"
+    caddy_site_upstream: "127.0.0.1:{{ audiobookshelf_port }}"
+  when: not ansible_check_mode

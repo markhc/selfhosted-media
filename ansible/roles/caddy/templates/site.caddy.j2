@@ -1,0 +1,5 @@
+# Managed by Ansible for {{ caddy_site_name }}.
+https://{{ caddy_site_hostname }} {
+	import selfhosted_private
+	reverse_proxy {{ caddy_site_upstream }}
+}

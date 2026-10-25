@@ -111,7 +111,7 @@ class AcmeTests(unittest.TestCase):
                 self.assertNotIn(TOKEN, result.stdout)
         # Caddy's token must not implicitly authorize the bouncer.
         result = run_role(self.directory, instance(), extra={
-            **SETTINGS, "web_stack_cloudflare_api_token": TOKEN,
+            **SETTINGS, "caddy_cloudflare_api_token": TOKEN,
         })
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn(TOKEN, result.stdout)

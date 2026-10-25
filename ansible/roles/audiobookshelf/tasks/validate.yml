@@ -1,0 +1,48 @@
+---
+- name: Validate the Audiobookshelf configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+      - audiobookshelf_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - audiobookshelf_hostname is defined
+      - audiobookshelf_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+      - audiobookshelf_port | int > 1024
+      - audiobookshelf_port | int < 65536
+      - audiobookshelf_uid | int > 0
+      - audiobookshelf_gid | int > 0
+    fail_msg: >-
+      Audiobookshelf requires Debian/Ubuntu, Caddy, an absolute deployment path,
+      audiobookshelf_hostname in a DNS zone you control, an unprivileged port,
+      and a non-root UID/GID.
+
+- name: Validate the Audiobookshelf library list
+  ansible.builtin.assert:
+    that:
+      - audiobookshelf_libraries is sequence
+      - audiobookshelf_libraries is not string
+      - audiobookshelf_libraries is not mapping
+      - audiobookshelf_libraries | selectattr('name', 'defined') | map(attribute='name') | unique | length
+        == audiobookshelf_libraries | length
+    fail_msg: Set audiobookshelf_libraries to a list of libraries with unique names.
+
+- name: Validate each Audiobookshelf library
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.name is defined and item.name is string
+      - item.name is match('^[a-z0-9][a-z0-9_-]{0,63}$')
+      - item.path is defined and item.path is string
+      # Absolute, without a trailing slash, empty, '.', or '..' components.
+      - item.path is match('^(?:/[^/\x00-\x1f\x7f]+)+$')
+      - (item.path ~ '/') is not search('/\.\.?/')
+      # Never expose another service's deployment data, such as Caddy's token.
+      - not ((audiobookshelf_directory | dirname) ~ '/').startswith(item.path ~ '/')
+      - not item.path.startswith((audiobookshelf_directory | dirname) ~ '/')
+      - item.read_only | default(true) is boolean
+    fail_msg: >-
+      Each Audiobookshelf library needs a lowercase name, an absolute host path
+      outside {{ audiobookshelf_directory | dirname }}, and an optional boolean read_only.
+  loop: "{{ audiobookshelf_libraries }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed') if item is mapping else 'invalid' }}"

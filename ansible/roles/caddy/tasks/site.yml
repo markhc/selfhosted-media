@@ -1,0 +1,35 @@
+---
+# Publishes a loopback service through Caddy. Callers set caddy_site_name,
+# caddy_site_hostname, and caddy_site_upstream.
+- name: Validate the Caddy site for {{ caddy_site_name }}
+  ansible.builtin.assert:
+    that:
+      - caddy_site_name is match('^[a-z0-9][a-z0-9_-]{0,63}$')
+      - caddy_site_hostname is string
+      - caddy_site_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+      - caddy_site_upstream is match('^127\.0\.0\.1:[0-9]{4,5}$')
+    fail_msg: >-
+      A Caddy site needs a lowercase name, a DNS hostname in a zone you control,
+      and a loopback upstream such as 127.0.0.1:8080.
+
+- name: Check that Caddy is deployed for {{ caddy_site_name }}
+  ansible.builtin.stat:
+    path: "{{ caddy_directory }}/compose.yml"
+  register: caddy_site_deployment
+
+- name: Require a deployed Caddy for {{ caddy_site_name }}
+  ansible.builtin.assert:
+    that:
+      - caddy_site_deployment.stat.exists
+    fail_msg: Deploy Caddy (make deploy-caddy) before publishing {{ caddy_site_name }}.
+
+- name: Write the Caddy site for {{ caddy_site_name }}
+  ansible.builtin.template:
+    src: site.caddy.j2
+    dest: "{{ caddy_directory }}/conf/sites/{{ caddy_site_name }}.caddy"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Apply the Caddy site for {{ caddy_site_name }}
+  ansible.builtin.import_tasks: reload.yml

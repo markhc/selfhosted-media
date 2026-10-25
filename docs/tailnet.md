@@ -17,10 +17,14 @@ account itself. Host-side enrollment is covered in the
    `make configure`.
 
 The supplied policy permits tailnet administrators to access the NAS on HTTPS
-port 443 only, and permits the NAS and administrators to reach `tag:irc` on
+port 443 only (every Caddy-served web service), and permits the NAS and administrators to reach `tag:irc` on
 TCP 6697 for ZNC. It grants no access from the bouncer back into the NAS and
-does not grant SSH. Review before replacing an existing policy: unrelated grants
-will be removed.
+does not grant SSH. To let other tailnet members, such as Audiobookshelf
+listeners, reach the web services, add their users or groups as `src` in a
+private copy of the `tag:nas` `tcp:443` grant (see
+[Use a private policy file](#use-a-private-policy-file)); each service still
+requires its own login. Review before replacing an existing policy: unrelated
+grants will be removed.
 
 ## Create the controller OAuth credential
 

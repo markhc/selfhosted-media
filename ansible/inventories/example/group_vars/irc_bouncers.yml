@@ -9,6 +9,8 @@ selfhosted_services:
     enabled: false
   thelounge:
     enabled: false
+  audiobookshelf:
+    enabled: false
 
 # Override per host when deploying multiple bouncers.
 tailscale_hostname: example-irc

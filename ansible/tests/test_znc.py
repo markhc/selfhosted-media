@@ -11,8 +11,6 @@ import unittest
 import uuid
 
 import yaml
-from ansible.plugins.filter.core import FilterModule
-from jinja2 import Environment
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -214,25 +212,11 @@ class ZncTests(unittest.TestCase):
         result = run_role(self.directory, config)
         self.assertEqual(result.returncode, 0, result.stdout)
 
-    def test_service_selection_and_host_separation(self):
-        play = yaml.safe_load((ROOT / "ansible/playbooks/site.yml").read_text())[0]
-        env = Environment()
-        env.filters['bool'] = FilterModule().filters()['bool']
-        roles = {role["role"]: role for role in play["roles"]}
-        selected = env.compile_expression(roles["znc"]["when"])
-        self.assertFalse(selected())
-        self.assertFalse(selected(selfhosted_services={"znc": {"enabled": False}}))
-        self.assertTrue(selected(selfhosted_services={"znc": {"enabled": True}}))
-        web = env.compile_expression(roles["web_stack"]["when"])
-        self.assertFalse(web(group_names=["irc_bouncers"], selfhosted_services={"caddy": {"enabled": True}}))
+    def test_example_inventories_do_not_select_znc(self):
+        # Generic per-service selection is covered by test_site.py.
         for group in ("nas", "irc_bouncers"):
             settings = yaml.safe_load((ROOT / f"ansible/inventories/example/group_vars/{group}.yml").read_text())
             self.assertFalse(settings["selfhosted_services"]["znc"]["enabled"])
-        runtime = env.compile_expression(roles["docker_runtime"]["when"])
-        self.assertFalse(runtime(group_names=["nas"], ansible_run_tags=["znc"],
-                                 selfhosted_services={"caddy": {"enabled": True}}))
-        self.assertTrue(runtime(group_names=["irc_bouncers"], ansible_run_tags=["znc"],
-                                selfhosted_services={"znc": {"enabled": True}}))
 
     @unittest.skipUnless(os.environ.get("ZNC_CONTAINER_TESTS") == "1", "opt-in Docker smoke test")
     def test_container_start_authenticate_restart_and_savebuff(self):

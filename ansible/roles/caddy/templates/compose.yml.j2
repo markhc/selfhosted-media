@@ -1,0 +1,15 @@
+# Managed by Ansible. Caddy publishes no ports through Docker's firewall rules.
+name: selfhosted-caddy
+services:
+  caddy:
+    image: selfhosted/caddy-cloudflare:{{ caddy_version }}-{{ caddy_cloudflare_version }}
+    build:
+      context: ./build
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./cloudflare.env
+    volumes:
+      - ./conf:/etc/caddy:ro
+      - ./data:/data
+      - ./config:/config

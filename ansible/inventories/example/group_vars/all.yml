@@ -1,7 +1,8 @@
 ---
 # Replace in the ignored local inventory with a domain you control.
 thelounge_hostname: lounge.example.com
+audiobookshelf_hostname: audiobooks.example.com
 
 # Optional: also serve HTTPS on the NAS's fixed LAN IPv4 without client Tailscale.
 # Leave empty for Tailscale-only access. Example placeholder: "192.168.50.10".
-web_stack_lan_ip: ""
+caddy_lan_ip: ""

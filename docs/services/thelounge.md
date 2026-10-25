@@ -16,7 +16,7 @@ thelounge_hostname: lounge.example.com
 
 The Lounge requires Caddy. Replace the placeholder hostname in your local
 inventory and complete the [Caddy HTTPS setup](caddy.md#set-up-private-https)
-before deploying with `make deploy-web` or `make deploy`.
+before deploying with `make deploy-thelounge` or `make deploy`.
 
 ## Create an account
 
@@ -24,8 +24,8 @@ Create a Lounge account interactively **on the NAS**; the placeholder below is
 a local app username, not an IRC nick or an infrastructure credential:
 
 ```bash
-sudo docker compose --project-directory /opt/selfhosted/web \
-  --project-name selfhosted-web exec --user 1000:1000 thelounge \
+sudo docker compose --project-directory /opt/selfhosted/thelounge \
+  --project-name selfhosted-thelounge exec --user 1000:1000 thelounge \
   thelounge add example-user
 ```
 
@@ -48,7 +48,8 @@ reachable from the tailnet or LAN.
 
 ## Data
 
-Lounge accounts, history, and uploads are stored under `/opt/selfhosted/web/`.
-Back them up securely and do not delete them on redeployment. If Caddy remains
-enabled while The Lounge is disabled, Compose removes the old Lounge container
-but preserves its data. See [Operations](../operations.md) for general guidance.
+Lounge accounts, history, uploads, and the managed `config.js` are stored under
+`/opt/selfhosted/thelounge/data`. Back them up securely and do not delete them
+on redeployment. Disabling The Lounge stops managing it but leaves its
+container and Caddy site running; see
+[Service selection and removal](../operations.md#service-selection-and-removal). See [Operations](../operations.md) for general guidance.
