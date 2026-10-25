@@ -1,0 +1,65 @@
+---
+- name: Validate the Pi-hole configuration
+  ansible.builtin.import_tasks: validate.yml
+
+# Sites published later, by services deployed after Pi-hole, need make deploy-pihole.
+- name: Collect the local DNS records
+  ansible.builtin.import_tasks: records.yml
+
+- name: Create the Pi-hole deployment directory
+  ansible.builtin.file:
+    path: "{{ pihole_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# The image re-owns its data as PIHOLE_UID:PIHOLE_GID on every start.
+- name: Create the Pi-hole data directory
+  ansible.builtin.file:
+    path: "{{ pihole_directory }}/etc-pihole"
+    state: directory
+    owner: "{{ pihole_uid }}"
+    group: "{{ pihole_gid }}"
+    mode: '0755'
+
+- name: Write the Pi-hole web interface password
+  ansible.builtin.copy:
+    content: "{{ pihole_webui_password }}"
+    dest: "{{ pihole_directory }}/webpassword"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  diff: false
+  register: pihole_password_file
+
+- name: Write the Pi-hole Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ pihole_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Pi-hole
+  community.docker.docker_compose_v2:
+    project_src: "{{ pihole_directory }}"
+    project_name: selfhosted-pihole
+    state: present
+    recreate: "{{ 'always' if pihole_password_file is changed else 'auto' }}"
+    remove_orphans: true
+    wait: true
+    # The first start downloads the blocklists.
+    wait_timeout: 300
+  when: not ansible_check_mode
+
+- name: Publish Pi-hole through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: pihole
+    caddy_site_hostname: "{{ pihole_hostname }}"
+    caddy_site_upstream: "127.0.0.1:{{ pihole_port }}"
+  when: not ansible_check_mode

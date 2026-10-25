@@ -1,0 +1,12 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+pihole_image: >-
+  {{ pihole_image_repository
+  | container_image(pihole_image_tag, pihole_image_digest) }}
+
+pihole_caddy_sites_directory: "{{ caddy_directory | default('/opt/selfhosted/caddy') }}/conf/sites"
+
+# One dnsmasq host-record: every hostname Caddy serves, including Pi-hole's own,
+# resolves to Caddy's LAN listener. pihole_site_hostnames comes from records.yml.
+pihole_host_record: >-
+  {{ (pihole_site_hostnames + [pihole_hostname]) | unique | sort | join(',') }},{{ caddy_lan_ip }}

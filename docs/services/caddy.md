@@ -62,7 +62,8 @@ caddy_lan_ip: "192.168.50.10"
 ```
 
 On your router/local DNS server, override each service hostname to that LAN
-IP, or add entries in the client's hosts file. Keep their external DNS
+IP, or add entries in the client's hosts file. [Pi-hole](pihole.md) does this
+automatically for every hostname Caddy serves. Keep their external DNS
 resolution pointing to the Tailscale IP. Use the same `https://` hostname on
 both networks; the existing certificates work for both. Allow LAN clients to
 reach TCP 443 on the NAS firewall; no router port forwarding is needed. LAN

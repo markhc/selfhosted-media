@@ -1,0 +1,23 @@
+---
+# Sets pihole_site_hostnames to the hostname of every site that the caddy role's
+# site tasks published on this host, including sites of disabled services.
+- name: Find the sites published through Caddy
+  ansible.builtin.find:
+    paths: "{{ pihole_caddy_sites_directory }}"
+    patterns: "*.caddy"
+  register: pihole_caddy_sites
+
+- name: Read the sites published through Caddy
+  ansible.builtin.slurp:
+    src: "{{ item.path }}"
+  loop: "{{ pihole_caddy_sites.files | sort(attribute='path') }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  register: pihole_caddy_site_files
+
+# The pattern admits only DNS name characters, so a name cannot inject dnsmasq options.
+- name: Collect the hostnames that Caddy serves
+  ansible.builtin.set_fact:
+    pihole_site_hostnames: >-
+      {{ pihole_caddy_site_files.results | map(attribute='content') | map('b64decode')
+      | map('regex_findall', '^https://([a-z0-9.-]+) \{$', multiline=True) | flatten | unique | sort }}

@@ -19,6 +19,8 @@ them explicitly with Compose on the host if they were already deployed.
   remove it, stop its project, delete
   `/opt/selfhosted/caddy/conf/sites/<service>.caddy`, and run
   `make deploy-caddy` to reload Caddy.
+- Disabling Pi-hole leaves it answering DNS on the LAN; point the router to
+  another DNS server before stopping it.
 - Disabling ZNC leaves an existing bouncer container and renewal timer running.
 
 For example, to stop and unpublish Audiobookshelf while keeping its data:
@@ -46,6 +48,7 @@ named after these prefixes:
 | [qui](services/qui.md) | `qui` |
 | [Sonarr](services/sonarr.md) | `sonarr` |
 | [Radarr](services/radarr.md) | `radarr` |
+| [Pi-hole](services/pihole.md) | `pihole` |
 | [ZNC](services/znc.md) | `znc` |
 | ZNC certificate renewal | `znc_acme` |
 
@@ -92,6 +95,7 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/qui/config` | qui configuration, session secret, and database |
 | `/opt/selfhosted/sonarr-<instance>/config` | Sonarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/radarr-<instance>/config` | Radarr configuration, database, and backups, per instance |
+| `/opt/selfhosted/pihole/etc-pihole` | Pi-hole configuration, lists, and query log |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 
 Back these up securely; do not commit or delete them on redeployment. The

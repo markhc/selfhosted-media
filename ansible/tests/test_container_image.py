@@ -20,7 +20,7 @@ DIGEST = "sha256:" + "0123456789abcdef" * 4
 # Image prefix -> role whose defaults define it.
 PREFIXES = {"nas_tailscale": "nas_tailscale", "caddy": "caddy", "thelounge": "thelounge",
             "audiobookshelf": "audiobookshelf", "qbittorrent": "qbittorrent", "qui": "qui",
-            "sonarr": "sonarr", "radarr": "radarr", "znc": "znc", "znc_acme": "znc"}
+            "sonarr": "sonarr", "radarr": "radarr", "pihole": "pihole", "znc": "znc", "znc_acme": "znc"}
 
 
 def defaults(role):

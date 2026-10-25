@@ -41,6 +41,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [qui](docs/services/qui.md) | `qui` | NAS | Web interface and client proxy for qBittorrent |
 | [Sonarr](docs/services/sonarr.md) | `sonarr` | NAS | TV series management, one or more instances |
 | [Radarr](docs/services/radarr.md) | `radarr` | NAS | Movie management, one or more instances |
+| [Pi-hole](docs/services/pihole.md) | `pihole` | NAS | LAN ad-blocking DNS that resolves the web services to Caddy's LAN address |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
 Enable each service with its `<key>_enabled` flag in the local inventory; see [Select services](docs/getting-started.md#select-services).

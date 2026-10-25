@@ -113,5 +113,15 @@ radarr_instances: []
 #     address: 127.10.2.2
 #     hostname: radarr-uhd.example.com
 
+# --- Pi-hole (docs/services/pihole.md); LAN DNS that resolves every Caddy hostname ---
+# Requires caddy_lan_ip, and pihole_webui_password in the vault.
+pihole_enabled: false
+pihole_image_repository: pihole/pihole
+pihole_image_tag: "2026.10.0"
+pihole_hostname: pihole.example.com
+# pihole_upstreams:
+#   - 1.1.1.1
+#   - 1.0.0.1
+
 # --- ZNC (docs/services/znc.md); runs on a separate bouncer host ---
 znc_enabled: false

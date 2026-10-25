@@ -1,0 +1,68 @@
+---
+- name: Validate the Pi-hole configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - caddy_enabled | default(false) | bool
+      - pihole_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - pihole_hostname is defined
+      - pihole_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+      - pihole_port | int > 1024
+      - pihole_port | int < 65536
+      - pihole_uid | int > 0
+      - pihole_gid | int > 0
+      - pihole_timezone is string
+      - pihole_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: >-
+      Pi-hole requires Debian/Ubuntu, Caddy, an absolute deployment path,
+      pihole_hostname in a DNS zone you control, an unprivileged port,
+      a non-root UID/GID, and an IANA timezone name.
+
+# Pi-hole answers DNS on the LAN and points every Caddy hostname at Caddy's LAN listener.
+- name: Validate the Pi-hole LAN addresses
+  ansible.builtin.assert:
+    that:
+      - item is string
+      - item is match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$')
+      - item is match('^(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)')
+      - (item.split('.') | map('int') | max) <= 255
+      - (item.split('.') | map('int') | map('string') | join('.')) == item
+    fail_msg: >-
+      Set caddy_lan_ip (and pihole_dns_address, if it differs) to a quoted RFC1918
+      IPv4 address assigned to the host's LAN interface.
+  loop:
+    - "{{ caddy_lan_ip | default('') }}"
+    - "{{ pihole_dns_address }}"
+  loop_control:
+    label: "{{ item | to_json }}"
+
+- name: Validate the Pi-hole upstream resolvers
+  ansible.builtin.assert:
+    that:
+      - pihole_upstreams is sequence
+      - pihole_upstreams is not string
+      - pihole_upstreams is not mapping
+      - pihole_upstreams | length > 0
+      - pihole_upstreams | select('string') | list | length == pihole_upstreams | length
+      - pihole_upstreams | reject('match', pihole_upstream_pattern) | list | length == 0
+    fail_msg: >-
+      Set pihole_upstreams to a list of resolver IP addresses, each with an
+      optional #port, such as 1.1.1.1 or 127.0.0.1#5335.
+  vars:
+    pihole_upstream_pattern: '^(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}|[0-9A-Fa-f]*:[0-9A-Fa-f:.]*)(?:#[0-9]{1,5})?$'
+
+- name: Require the Pi-hole web interface password
+  ansible.builtin.assert:
+    that:
+      - pihole_webui_password is string
+      - pihole_webui_password | length >= 8
+      - pihole_webui_password is not search('[\x00-\x1f\x7f]')
+    fail_msg: >-
+      Set pihole_webui_password in the Ansible Vault to a password of at least
+      8 characters without control characters.
+
+- name: Validate the Pi-hole container image
+  ansible.builtin.assert:
+    that:
+      - pihole_image is string
+    quiet: true
