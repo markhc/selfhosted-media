@@ -33,7 +33,7 @@ class SiteSelectionTests(unittest.TestCase):
                                    "znc": {}, "plex": None}), ["caddy"])
 
     def test_each_service_role_is_tagged_and_gated_by_its_own_key(self):
-        for name in ("caddy", "thelounge", "audiobookshelf", "znc"):
+        for name in ("caddy", "thelounge", "audiobookshelf", "qbittorrent", "znc"):
             with self.subTest(role=name):
                 self.assertEqual(ROLES[name]["tags"], [name])
                 gate = expression(ROLES[name]["when"])

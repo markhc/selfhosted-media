@@ -62,6 +62,11 @@
       tags:
         - audiobookshelf
 
+    - role: qbittorrent
+      when: "'qbittorrent' in selfhosted_selected"
+      tags:
+        - qbittorrent
+
     - role: znc
       when: "'znc' in selfhosted_selected"
       tags:

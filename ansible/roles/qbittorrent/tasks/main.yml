@@ -1,0 +1,81 @@
+---
+- name: Validate the qBittorrent configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect the shared data path
+  ansible.builtin.stat:
+    path: "{{ qbittorrent_data_path }}"
+  register: qbittorrent_data_stat
+
+- name: Require an existing shared data path
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_data_stat.stat.exists
+      - qbittorrent_data_stat.stat.isdir
+    fail_msg: >-
+      selfhosted_data_path must point to an existing directory;
+      it is never created automatically.
+
+- name: Create the qBittorrent deployment directory
+  ansible.builtin.file:
+    path: "{{ qbittorrent_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# Never recursive: migrated configuration keeps the ownership the operator set.
+- name: Create qBittorrent configuration directories
+  ansible.builtin.file:
+    path: "{{ qbittorrent_directory }}/{{ item }}"
+    state: directory
+    owner: "{{ qbittorrent_uid }}"
+    group: "{{ qbittorrent_gid }}"
+    mode: '0700'
+  loop:
+    - config
+    - config/qBittorrent
+    - config/qBittorrent/config
+
+- name: Converge the qBittorrent configuration
+  ansible.builtin.import_tasks: conf.yml
+
+- name: Write the qBittorrent Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ qbittorrent_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge qBittorrent
+  community.docker.docker_compose_v2:
+    project_src: "{{ qbittorrent_directory }}"
+    project_name: selfhosted-qbittorrent
+    state: present
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+
+- name: Publish the qBittorrent WebUI through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: qbittorrent
+    caddy_site_hostname: "{{ qbittorrent_hostname }}"
+    caddy_site_upstream: "{{ qbittorrent_webui_address }}:{{ qbittorrent_webui_port }}"
+  when:
+    - qbittorrent_published | bool
+    - not ansible_check_mode
+
+- name: Unpublish the qBittorrent WebUI in favor of qui
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: unpublish
+  vars:
+    caddy_site_name: qbittorrent
+  when:
+    - not qbittorrent_published | bool
+    - not ansible_check_mode

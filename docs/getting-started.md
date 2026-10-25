@@ -97,7 +97,7 @@ selfhosted_timezone: America/Sao_Paulo
 
 To override one service, set `<service>_timezone`, for example
 `znc_timezone` in a bouncer's host variables. The setting applies to Caddy,
-The Lounge, Audiobookshelf, and ZNC. Tailscale is excluded because its image
+The Lounge, Audiobookshelf, qBittorrent, and ZNC. Tailscale is excluded because its image
 has no timezone data, so it always logs in UTC. Changing the value recreates
 the affected containers on the next deployment.
 
@@ -121,7 +121,8 @@ make deploy-audiobookshelf
 Each service is its own Ansible role and Docker Compose project under
 `/opt/selfhosted/<service>`. Web services such as The Lounge and
 Audiobookshelf require Caddy to be deployed first; `make deploy` orders this
-automatically. Only `deploy-tailscale` on a host without Tailscale state needs
+automatically. The download and library services share the data layout in
+[Media stack](media-stack.md). Only `deploy-tailscale` on a host without Tailscale state needs
 to create an enrollment key.
 
 Append `ASK_BECOME_PASS=1` to a target if sudo requires a password. Initial

@@ -1,0 +1,66 @@
+---
+- name: Resolve the media service addresses
+  ansible.builtin.include_role:
+    name: media_hosts
+
+- name: Validate the qBittorrent configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - qbittorrent_confirm_legal_notice is boolean
+      - qbittorrent_confirm_legal_notice
+      - qbittorrent_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - qbittorrent_webui_port | int > 1024
+      - qbittorrent_webui_port | int < 65536
+      - qbittorrent_torrenting_port | int > 1024
+      - qbittorrent_torrenting_port | int < 65536
+      - qbittorrent_webui_port | int != qbittorrent_torrenting_port | int
+      - qbittorrent_uid | int > 0
+      - qbittorrent_gid | int > 0
+      - qbittorrent_umask is string
+      - qbittorrent_umask is match('^0?[0-7]{3}$')
+      - qbittorrent_timezone is string
+      - qbittorrent_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: >-
+      qBittorrent requires Debian/Ubuntu, qbittorrent_confirm_legal_notice set to true,
+      an absolute deployment path, two different unprivileged ports, a non-root UID/GID,
+      a quoted octal umask such as "002", and an IANA timezone name.
+
+- name: Validate the shared data path for qBittorrent
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_data_path is string
+      # Absolute, without a trailing slash, empty, '.', or '..' components.
+      - qbittorrent_data_path is match('^(?:/[^/\x00-\x1f\x7f]+)+$')
+      - (qbittorrent_data_path ~ '/') is not search('/\.\.?/')
+      # Never expose another service's deployment data, such as Caddy's token.
+      - not ((qbittorrent_directory | dirname) ~ '/').startswith(qbittorrent_data_path ~ '/')
+      - not qbittorrent_data_path.startswith((qbittorrent_directory | dirname) ~ '/')
+    fail_msg: >-
+      Set selfhosted_data_path to the existing media data root, an absolute host path
+      outside {{ qbittorrent_directory | dirname }}.
+
+- name: Validate the qBittorrent WebUI credentials
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_webui_username is defined
+      - qbittorrent_webui_username is string
+      - qbittorrent_webui_username is match('^[A-Za-z0-9._-]{1,64}$')
+      - qbittorrent_webui_password is defined
+      - qbittorrent_webui_password is string
+      - qbittorrent_webui_password | length >= 12
+      - qbittorrent_webui_password is not search('[\x00-\x1f\x7f]')
+    fail_msg: >-
+      Set qbittorrent_webui_username (letters, digits, '.', '_', or '-') and a
+      qbittorrent_webui_password of at least 12 characters in the encrypted vault.
+
+- name: Validate the qBittorrent WebUI publication
+  ansible.builtin.assert:
+    that:
+      - (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+      - qbittorrent_hostname is defined
+      - qbittorrent_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+    fail_msg: >-
+      Without qui on this host, the qBittorrent WebUI is published through Caddy:
+      enable Caddy and set qbittorrent_hostname in a DNS zone you control.
+  when: qbittorrent_published | bool

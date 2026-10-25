@@ -1,0 +1,23 @@
+---
+# Removes a site published by the site tasks. Callers set caddy_site_name.
+- name: Validate the Caddy site name for {{ caddy_site_name }}
+  ansible.builtin.assert:
+    that:
+      - caddy_site_name is match('^[a-z0-9][a-z0-9_-]{0,63}$')
+    fail_msg: A Caddy site needs a lowercase name.
+
+- name: Check for the Caddy site for {{ caddy_site_name }}
+  ansible.builtin.stat:
+    path: "{{ caddy_directory }}/conf/sites/{{ caddy_site_name }}.caddy"
+  register: caddy_site_file
+
+- name: Remove the Caddy site for {{ caddy_site_name }}
+  when: caddy_site_file.stat.exists
+  block:
+    - name: Delete the Caddy site for {{ caddy_site_name }}
+      ansible.builtin.file:
+        path: "{{ caddy_site_file.stat.path }}"
+        state: absent
+
+    - name: Apply the removal of the Caddy site for {{ caddy_site_name }}
+      ansible.builtin.import_tasks: reload.yml

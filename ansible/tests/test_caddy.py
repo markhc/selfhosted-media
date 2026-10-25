@@ -78,12 +78,30 @@ class CaddyTests(unittest.TestCase):
 
     def test_invalid_sites_are_rejected(self):
         validation = yaml.safe_load((ROOT / "ansible/roles/caddy/tasks/site.yml").read_text())[0]
+        result = run_play(self.directory, {**SETTINGS, "caddy_site_upstream": "127.10.1.2:8989"}, [validation])
+        self.assertEqual(result.returncode, 0, result.stdout)
         for extra in ({"caddy_site_name": "Bad Name"}, {"caddy_site_hostname": "not a hostname"},
-                      {"caddy_site_upstream": "0.0.0.0:8080"}, {"caddy_site_upstream": "192.168.1.5:8080"}):
+                      {"caddy_site_upstream": "0.0.0.0:8080"}, {"caddy_site_upstream": "192.168.1.5:8080"},
+                      {"caddy_site_upstream": "127.256.0.1:8080"}, {"caddy_site_upstream": "127.0.0.01:8080"},
+                      {"caddy_site_upstream": "127.0.0.1:8080/x"}):
             with self.subTest(extra=extra):
                 result = run_play(self.directory, {**SETTINGS, **extra}, [validation])
                 self.assertNotEqual(result.returncode, 0, result.stdout)
                 self.assertIn("A Caddy site needs", result.stdout)
+
+    def test_unpublishing_an_absent_site_changes_nothing(self):
+        tasks = [{"name": "Unpublish fixture", "ansible.builtin.include_role": {
+            "name": "caddy", "tasks_from": "unpublish"}}]
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
+            (Path(temp) / "conf/sites").mkdir(parents=True)
+            (Path(temp) / "conf/sites/other.caddy").write_text("# fixture\n")
+            result = run_play(temp, {**SETTINGS, "caddy_directory": temp}, tasks)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertRegex(result.stdout, r"changed=0\b")
+            self.assertTrue((Path(temp) / "conf/sites/other.caddy").exists())
+            result = run_play(temp, {**SETTINGS, "caddy_directory": temp, "caddy_site_name": "../other"}, tasks)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("A Caddy site needs", result.stdout)
 
 
 if __name__ == "__main__":

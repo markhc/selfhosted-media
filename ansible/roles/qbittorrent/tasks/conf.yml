@@ -1,0 +1,103 @@
+---
+- name: Inspect the qBittorrent configuration
+  ansible.builtin.stat:
+    path: "{{ qbittorrent_conf_path }}"
+  register: qbittorrent_conf_stat
+
+- name: Seed the qBittorrent configuration
+  ansible.builtin.template:
+    src: qBittorrent.conf.j2
+    dest: "{{ qbittorrent_conf_path }}"
+    owner: "{{ qbittorrent_uid }}"
+    group: "{{ qbittorrent_gid }}"
+    mode: '0600'
+  when: not qbittorrent_conf_stat.stat.exists
+  no_log: true
+  diff: false
+
+# qBittorrent rewrites its configuration on exit, so changes apply only while it is stopped.
+- name: Detect qBittorrent WebUI setting drift
+  community.general.ini_file:
+    path: "{{ qbittorrent_conf_path }}"
+    section: WebUI
+    option: "{{ item.option }}"
+    value: "{{ item.value | string }}"
+    no_extra_spaces: true
+    owner: "{{ qbittorrent_uid }}"
+    group: "{{ qbittorrent_gid }}"
+    mode: '0600'
+  loop: "{{ qbittorrent_webui_settings }}"
+  check_mode: true
+  register: qbittorrent_drift
+  when: qbittorrent_conf_stat.stat.exists
+  no_log: true
+  diff: false
+
+- name: Detect legacy qBittorrent WebUI settings
+  community.general.ini_file:
+    path: "{{ qbittorrent_conf_path }}"
+    section: Preferences
+    option: WebUI\{{ item }}
+    state: absent
+    owner: "{{ qbittorrent_uid }}"
+    group: "{{ qbittorrent_gid }}"
+    mode: '0600'
+  # Option names only: the setting values include the password hash.
+  loop: "{{ qbittorrent_webui_settings | map(attribute='option') | list }}"
+  check_mode: true
+  register: qbittorrent_legacy
+  when: qbittorrent_conf_stat.stat.exists
+
+- name: Record qBittorrent configuration drift
+  ansible.builtin.set_fact:
+    qbittorrent_conf_drift: "{{ qbittorrent_drift is changed or qbittorrent_legacy is changed }}"
+
+- name: Inspect the qBittorrent Compose project
+  ansible.builtin.stat:
+    path: "{{ qbittorrent_directory }}/compose.yml"
+  register: qbittorrent_compose_stat
+
+- name: Stop qBittorrent before changing its configuration
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ qbittorrent_directory }}"
+      - --project-name
+      - selfhosted-qbittorrent
+      - stop
+  changed_when: true
+  when:
+    - qbittorrent_compose_stat.stat.exists
+    - qbittorrent_conf_drift | bool
+    - not ansible_check_mode
+
+# qBittorrent 5.3 moves [Preferences] WebUI\* keys over [WebUI] ones on its first start.
+- name: Remove legacy qBittorrent WebUI settings
+  community.general.ini_file:
+    path: "{{ qbittorrent_conf_path }}"
+    section: Preferences
+    option: WebUI\{{ item }}
+    state: absent
+    owner: "{{ qbittorrent_uid }}"
+    group: "{{ qbittorrent_gid }}"
+    mode: '0600'
+  # Option names only: the setting values include the password hash.
+  loop: "{{ qbittorrent_webui_settings | map(attribute='option') | list }}"
+  when: qbittorrent_conf_drift | bool
+
+- name: Enforce qBittorrent WebUI settings
+  community.general.ini_file:
+    path: "{{ qbittorrent_conf_path }}"
+    section: WebUI
+    option: "{{ item.option }}"
+    value: "{{ item.value | string }}"
+    no_extra_spaces: true
+    owner: "{{ qbittorrent_uid }}"
+    group: "{{ qbittorrent_gid }}"
+    mode: '0600'
+  loop: "{{ qbittorrent_webui_settings }}"
+  when: qbittorrent_conf_drift | bool
+  no_log: true
+  diff: false

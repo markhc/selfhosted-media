@@ -34,9 +34,12 @@ sudo rm /opt/selfhosted/caddy/conf/sites/audiobookshelf.caddy
 | `/opt/selfhosted/caddy/` | Caddy certificates, ACME accounts, and published sites |
 | `/opt/selfhosted/thelounge/data` | Lounge accounts, history, and uploads |
 | `/opt/selfhosted/audiobookshelf/` | Audiobookshelf database and metadata |
+| `/opt/selfhosted/qbittorrent/config` | qBittorrent configuration and torrent resume data |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 
-Back these up securely; do not commit or delete them on redeployment. Keep the
+Back these up securely; do not commit or delete them on redeployment. The
+shared [media data root](media-stack.md#shared-data-layout) is never created,
+re-owned, or deleted by Ansible. Keep the
 encrypted vault and its password in secure backups too.
 
 ## Credentials on hosts

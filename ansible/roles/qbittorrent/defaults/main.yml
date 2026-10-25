@@ -1,0 +1,15 @@
+---
+qbittorrent_directory: /opt/selfhosted/qbittorrent
+qbittorrent_image: qbittorrentofficial/qbittorrent-nox:5.3.0-2
+qbittorrent_webui_port: 8080
+# Peer traffic listens on every interface; forward it on the router for incoming peers.
+qbittorrent_torrenting_port: 6881
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+qbittorrent_timezone: "{{ selfhosted_timezone | default('UTC') }}"
+# The shared media data root, mounted at /data in every service that handles media files.
+qbittorrent_data_path: "{{ selfhosted_data_path | default('') }}"
+qbittorrent_uid: "{{ selfhosted_data_uid | default(1000) }}"
+qbittorrent_gid: "{{ selfhosted_data_gid | default(1000) }}"
+qbittorrent_umask: "{{ selfhosted_data_umask | default('002') }}"
+# Set to true only after reading qBittorrent's legal notice.
+qbittorrent_confirm_legal_notice: false

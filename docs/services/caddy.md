@@ -77,7 +77,8 @@ Caddy's own Caddyfile defines the private listener and certificate settings
 once, as the `selfhosted_private` snippet, and imports every file in
 `/opt/selfhosted/caddy/conf/sites/`. A web service role starts its loopback-only
 container, then calls the caddy role's `site` tasks with a site name, hostname,
-and `127.0.0.1:<port>` upstream:
+and loopback upstream: usually `127.0.0.1:<port>`, or the service's own
+[media stack address](../media-stack.md#names-and-loopback-addresses).
 
 ```yaml
 - name: Publish Example through Caddy
@@ -95,6 +96,11 @@ and gracefully reloads Caddy. A reload that fails, for example because two
 services use the same hostname, fails the deployment and leaves the previous
 configuration running. Adding a web service never requires changing the
 Caddy role.
+
+A role that stops publishing a site it owns, such as
+[qBittorrent](qbittorrent.md) once qui replaces its WebUI, calls the `unpublish`
+tasks with the same `caddy_site_name`. They delete `sites/<name>.caddy` and
+reload Caddy only if the file exists.
 
 ## Network exposure
 

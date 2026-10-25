@@ -1,0 +1,31 @@
+---
+# The WebUI binds to the loopback address that the media_hosts role assigns.
+qbittorrent_webui_address: "{{ media_hosts_addresses.qbittorrent }}"
+
+qbittorrent_conf_path: "{{ qbittorrent_directory }}/config/qBittorrent/config/qBittorrent.conf"
+
+# qui is the web UI when selected on the same host; otherwise Caddy publishes the WebUI.
+qbittorrent_published: >-
+  {{ not ((selfhosted_services | default({})).get('qui', {}).get('enabled', false) | bool) }}
+
+# WebUI settings enforced on every deployment. Local and subnet authentication bypasses
+# stay off because Caddy and qui reach the WebUI from loopback.
+qbittorrent_webui_settings:
+  - option: Address
+    value: "{{ qbittorrent_webui_address }}"
+  - option: Port
+    value: "{{ qbittorrent_webui_port }}"
+  - option: LocalHostAuth
+    value: "true"
+  - option: AuthSubnetWhitelistEnabled
+    value: "false"
+  - option: ReverseProxySupportEnabled
+    value: "true"
+  - option: TrustedReverseProxiesList
+    value: 127.0.0.1
+  - option: Username
+    value: "{{ qbittorrent_webui_username }}"
+  - option: Password_PBKDF2
+    value: >-
+      "{{ qbittorrent_webui_password
+      | qbittorrent_pbkdf2(inventory_hostname ~ ':' ~ qbittorrent_webui_username) }}"

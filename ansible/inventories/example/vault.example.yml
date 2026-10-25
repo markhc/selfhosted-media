@@ -11,6 +11,11 @@ tailscale_oauth_client_secret: ""
 # Required whenever Caddy is enabled, including later certificate renewals.
 caddy_cloudflare_api_token: ""
 
+# Required whenever qBittorrent is enabled. Ansible writes only a PBKDF2 hash to
+# the NAS; at least 12 characters.
+qbittorrent_webui_username: ""
+qbittorrent_webui_password: ""
+
 # Optional ZNC: keyed by inventory alias so different hosts get different config.
 # Copy this structure inside the encrypted vault; do not put real values here.
 # Generate password_hash with `znc --makepass` (Argon2id); copy only its Hash value.

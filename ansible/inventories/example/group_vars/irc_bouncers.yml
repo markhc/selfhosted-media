@@ -11,6 +11,8 @@ selfhosted_services:
     enabled: false
   audiobookshelf:
     enabled: false
+  qbittorrent:
+    enabled: false
 
 # Override per host when deploying multiple bouncers.
 tailscale_hostname: example-irc

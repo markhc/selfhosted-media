@@ -1,0 +1,16 @@
+---
+# Loopback address of each single-instance media service; override one with
+# <service>_address. Sonarr and Radarr instances set an address per instance in
+# <app>_instances instead.
+media_hosts_services:
+  qbittorrent: "{{ qbittorrent_address | default('127.10.0.1') }}"
+  qui: "{{ qui_address | default('127.10.0.2') }}"
+  prowlarr: "{{ prowlarr_address | default('127.10.0.3') }}"
+media_hosts_instance_services:
+  - sonarr
+  - radarr
+
+media_hosts_selected: >-
+  {{ (selfhosted_services | default({})) | dict2items
+  | selectattr('value.enabled', 'defined') | selectattr('value.enabled', 'equalto', true)
+  | map(attribute='key') | list }}

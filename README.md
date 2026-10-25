@@ -26,6 +26,8 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 - [Operations](docs/operations.md): disabling services, persistent data,
   backups, and credentials on hosts.
 - [Validation](docs/validation.md): offline checks and container smoke tests.
+- [Media stack](docs/media-stack.md): shared data layout, loopback endpoints,
+  and migration for the download and library services.
 
 ## Services
 
@@ -35,6 +37,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Caddy](docs/services/caddy.md) | `caddy` | NAS | Private HTTPS reverse proxy with DNS-01 certificates |
 | [The Lounge](docs/services/thelounge.md) | `thelounge` | NAS | Private web IRC client |
 | [Audiobookshelf](docs/services/audiobookshelf.md) | `audiobookshelf` | NAS | Private audiobook and podcast server |
+| [qBittorrent](docs/services/qbittorrent.md) | `qbittorrent` | NAS | BitTorrent client for the media stack |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
 Enable each service with `selfhosted_services.<key>.enabled` in the local

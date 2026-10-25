@@ -1,0 +1,12 @@
+[BitTorrent]
+Session\DefaultSavePath=/data/torrents
+Session\DisableAutoTMMByDefault=false
+Session\TempPathEnabled=false
+
+[Meta]
+MigrationVersion=9999
+
+[WebUI]
+{% for setting in qbittorrent_webui_settings %}
+{{ setting.option }}={{ setting.value }}
+{% endfor %}
