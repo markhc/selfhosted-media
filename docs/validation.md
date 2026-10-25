@@ -7,7 +7,9 @@ make check
 ```
 
 The offline tests check host selection, secret redaction (including `--diff`),
-input validation, and generated configuration.
+input validation, and generated configuration. They run in parallel with
+pytest-xdist; run a single file with, for example,
+`.venv/bin/python -m pytest ansible/tests/test_qui.py`.
 
 ## Container smoke tests
 

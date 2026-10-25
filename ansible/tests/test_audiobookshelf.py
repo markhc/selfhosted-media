@@ -6,7 +6,7 @@ import unittest
 
 import yaml
 
-from rolefixture import TEMP_ROOT, run_role
+from rolefixture import TEMP_ROOT, assert_cases_fail_validation, run_role, validate_task
 
 
 LIBRARIES = [
@@ -74,11 +74,7 @@ class AudiobookshelfTests(unittest.TestCase):
                      "/opt/selfhosted", "/opt/selfhosted/caddy", "/opt/selfhosted/audiobookshelf/config",
                      "/srv/bad\npath"):
             cases.append({"audiobookshelf_libraries": [{"name": "audiobooks", "path": path}]})
-        for extra in cases:
-            with self.subTest(extra=extra):
-                result = run_role("audiobookshelf", self.directory, {**SETTINGS, **extra})
-                self.assertNotEqual(result.returncode, 0, result.stdout)
-                self.assertIn('"evaluated_to": false', result.stdout)
+        assert_cases_fail_validation(self, self.directory, SETTINGS, cases, [validate_task("audiobookshelf")])
 
 
 if __name__ == "__main__":

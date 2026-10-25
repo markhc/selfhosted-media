@@ -11,7 +11,8 @@ import unittest
 
 import yaml
 
-from rolefixture import ROOT, TEMP_ROOT, run_play, run_role
+from rolefixture import (ROOT, TEMP_ROOT, assert_cases_fail_validation, run_cases, run_play, run_role,
+                         validate_task)
 
 
 PASSWORD = "fake-qbittorrent-password-for-tests"
@@ -76,6 +77,17 @@ def verify_pbkdf2(value, password):
     return len(salt) == 16 and hashlib.pbkdf2_hmac("sha512", password.encode(), salt, 100000, 64) == key
 
 
+CONVERGE_TASKS = [{"name": "Resolve fixture", "ansible.builtin.include_role": {"name": "media_hosts"}},
+                  {"name": "Converge fixture", "ansible.builtin.import_role": {
+                      "name": "qbittorrent", "tasks_from": "conf"}}]
+
+
+def conf_variables(directory, extra=None):
+    """Return the settings that converge the qBittorrent configuration in DIRECTORY."""
+    return {**SETTINGS, "qbittorrent_directory": str(directory),
+            "qbittorrent_uid": os.getuid(), "qbittorrent_gid": os.getgid(), **(extra or {})}
+
+
 class QbittorrentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -91,12 +103,7 @@ class QbittorrentTests(unittest.TestCase):
         cls.temp.cleanup()
 
     def converge_conf(self, directory, extra=None):
-        variables = {**SETTINGS, "qbittorrent_directory": str(directory),
-                     "qbittorrent_uid": os.getuid(), "qbittorrent_gid": os.getgid(), **(extra or {})}
-        tasks = [{"name": "Resolve fixture", "ansible.builtin.include_role": {"name": "media_hosts"}},
-                 {"name": "Converge fixture", "ansible.builtin.import_role": {
-                     "name": "qbittorrent", "tasks_from": "conf"}}]
-        return run_play(directory, variables, tasks)
+        return run_play(directory, conf_variables(directory, extra), CONVERGE_TASKS)
 
     def test_webui_on_loopback_and_unprivileged(self):
         self.assertEqual(self.compose["name"], "selfhosted-qbittorrent")
@@ -190,25 +197,31 @@ class QbittorrentTests(unittest.TestCase):
             ("5.3.0-2", PREFERENCES_CONF, ("WebUI", ""), ("Preferences", "WebUI\\")),
             ("5.3.0-2", WEBUI_CONF, ("WebUI", ""), ("Preferences", "WebUI\\")),
         ]
-        for tag, existing, current, stale in cases:
-            with self.subTest(tag=tag, existing=existing), tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-                conf_path = Path(temp) / "config/qBittorrent/config/qBittorrent.conf"
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
+            # Every case converges its own directory as its own host, in one run per pass.
+            hosts = []
+            for index, (tag, existing, _, _) in enumerate(cases):
+                directory = Path(temp) / str(index)
+                conf_path = directory / "config/qBittorrent/config/qBittorrent.conf"
                 conf_path.parent.mkdir(parents=True)
                 conf_path.write_text(existing)
-                first = self.converge_conf(temp, {"qbittorrent_image_tag": tag})
-                self.assertEqual(first.returncode, 0, first.stdout)
-                text = conf_path.read_text()
-                webui = webui_settings(text, *current)
-                self.assertEqual(webui["Address"], "127.10.0.1")
-                self.assertEqual(webui["LocalHostAuth"], "true")
-                self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
-                self.assertEqual(webui_settings(text, *stale), {})
-                conf = webui_section(text)
-                self.assertEqual(conf["Preferences"]["Downloads\\SavePath"], "/data/torrents")
-                self.assertEqual(conf["BitTorrent"]["Session\\DefaultSavePath"], "/data/torrents")
-                second = self.converge_conf(temp, {"qbittorrent_image_tag": tag})
-                self.assertEqual(second.returncode, 0, second.stdout)
-                self.assertRegex(second.stdout, r"changed=0\b")
+                hosts.append(conf_variables(directory, {"qbittorrent_image_tag": tag}))
+            first, first_outcomes = run_cases(temp, hosts, CONVERGE_TASKS)
+            second, second_outcomes = run_cases(temp, hosts, CONVERGE_TASKS)
+            for index, (tag, existing, current, stale) in enumerate(cases):
+                with self.subTest(tag=tag, existing=existing):
+                    self.assertEqual(first_outcomes[index]["failed"], 0, first.stdout)
+                    text = (Path(temp) / str(index) / "config/qBittorrent/config/qBittorrent.conf").read_text()
+                    webui = webui_settings(text, *current)
+                    self.assertEqual(webui["Address"], "127.10.0.1")
+                    self.assertEqual(webui["LocalHostAuth"], "true")
+                    self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
+                    self.assertEqual(webui_settings(text, *stale), {})
+                    conf = webui_section(text)
+                    self.assertEqual(conf["Preferences"]["Downloads\\SavePath"], "/data/torrents")
+                    self.assertEqual(conf["BitTorrent"]["Session\\DefaultSavePath"], "/data/torrents")
+                    self.assertEqual(second_outcomes[index]["failed"], 0, second.stdout)
+                    self.assertEqual(second_outcomes[index]["changed"], 0, second.stdout)
 
     def test_newer_release_is_seeded_with_a_webui_section(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
@@ -292,12 +305,8 @@ class QbittorrentTests(unittest.TestCase):
             cases.append({"qbittorrent_mounts": [{**mount, "path": path}]})
         for target in ("watch", "/watch/", "/", "/config", "/tmp/watch", "/etc", "/data", "/data/watch", "/my watch"):
             cases.append({"qbittorrent_mounts": [{**mount, "target": target}]})
-        for extra in cases:
-            with self.subTest(extra=extra):
-                result = run_role("qbittorrent", self.directory, {**SETTINGS, **extra})
-                self.assertNotEqual(result.returncode, 0, result.stdout)
-                self.assertIn('"evaluated_to": false', result.stdout)
-                self.assertNotIn(PASSWORD, result.stdout)
+        assert_cases_fail_validation(self, self.directory, SETTINGS, cases, [validate_task("qbittorrent")],
+                                     secrets=(PASSWORD,))
 
 
 if __name__ == "__main__":

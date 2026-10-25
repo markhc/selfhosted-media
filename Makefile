@@ -42,6 +42,7 @@ setup: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP) inventory
 $(ANSIBLE_PLAYBOOK): requirements-dev.txt
 	$(PYTHON) -m venv $(VENV)
 	$(VENV)/bin/python -m pip install -r requirements-dev.txt
+	touch $(ANSIBLE_PLAYBOOK)
 
 $(COLLECTION_STAMP): ansible/requirements.yml $(ANSIBLE_PLAYBOOK)
 	mkdir -p .ansible/collections
@@ -121,7 +122,7 @@ lint: $(ANSIBLE_PLAYBOOK)
 	$(ANSIBLE_LINT) ansible/playbooks/site.yml ansible/playbooks/tailnet.yml ansible/playbooks/tailscale-status.yml ansible/roles
 
 test: $(ANSIBLE_PLAYBOOK)
-	$(VENV)/bin/python -m unittest discover -s ansible/tests -v
+	$(VENV)/bin/python -m pytest -n auto -p no:cacheprovider ansible/tests
 
 clean:
 	rm -f "$(COLLECTION_STAMP)"

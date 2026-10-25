@@ -5,7 +5,7 @@ import re
 import tempfile
 import unittest
 
-from rolefixture import TEMP_ROOT, run_play
+from rolefixture import TEMP_ROOT, assert_cases_fail_validation, run_play
 
 
 SETTINGS = {
@@ -64,11 +64,7 @@ class MediaHostsTests(unittest.TestCase):
         for address in ("127.0.0.1", "127.0.0.53", "127.0.1.1", "10.0.0.1", "127.10.1", "127.10.1.256",
                         "127.10.01.1", "localhost", 127):
             cases.append({"qbittorrent_address": address})
-        for extra in cases:
-            with self.subTest(extra=extra):
-                result, _ = resolve(self.temp.name, {**SETTINGS, **extra})
-                self.assertNotEqual(result.returncode, 0, result.stdout)
-                self.assertIn('"evaluated_to": false', result.stdout)
+        assert_cases_fail_validation(self, self.temp.name, SETTINGS, cases, TASKS)
 
 
 if __name__ == "__main__":
