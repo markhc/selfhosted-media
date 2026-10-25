@@ -1,0 +1,5 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+nas_tailscale_image: >-
+  {{ nas_tailscale_image_repository
+  | container_image(nas_tailscale_image_tag, nas_tailscale_image_digest) }}

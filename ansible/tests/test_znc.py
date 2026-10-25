@@ -220,7 +220,7 @@ class ZncTests(unittest.TestCase):
         # Generic per-service selection is covered by test_site.py.
         for group in ("nas", "irc_bouncers"):
             settings = yaml.safe_load((ROOT / f"ansible/inventories/example/group_vars/{group}.yml").read_text())
-            self.assertFalse(settings["selfhosted_services"]["znc"]["enabled"])
+            self.assertIs(settings["znc_enabled"], False)
 
     @unittest.skipUnless(os.environ.get("ZNC_CONTAINER_TESTS") == "1", "opt-in Docker smoke test")
     def test_container_start_authenticate_restart_and_savebuff(self):

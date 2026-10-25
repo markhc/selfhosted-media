@@ -9,23 +9,16 @@ apps, syncs listening progress, and can download podcast episodes.
 
 ```yaml
 # group_vars/nas.yml
-selfhosted_services:
-  caddy:
-    enabled: true
-  audiobookshelf:
-    enabled: true
+caddy_enabled: true
 
+audiobookshelf_enabled: true
+audiobookshelf_hostname: audiobooks.example.com
 audiobookshelf_libraries:
   - name: audiobooks
     path: /srv/media/audiobooks
   - name: podcasts
     path: /srv/media/podcasts
     read_only: false
-```
-
-```yaml
-# group_vars/all.yml
-audiobookshelf_hostname: audiobooks.example.com
 ```
 
 Audiobookshelf requires Caddy on the same host and needs no vault variables of
@@ -79,8 +72,8 @@ make deploy-audiobookshelf   # Docker and Audiobookshelf; Caddy must be deployed
 make deploy                  # The full selected stack
 ```
 
-To upgrade, change `audiobookshelf_image` to a newer pinned tag and
-redeploy. Audiobookshelf migrates its database on start; take a backup first.
+To upgrade, change `audiobookshelf_image_tag` to a newer release and
+redeploy; see [Container images](../operations.md#container-images). Audiobookshelf migrates its database on start; take a backup first.
 
 ## Network exposure
 

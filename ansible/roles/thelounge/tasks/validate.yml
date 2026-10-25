@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - ansible_facts.distribution in ['Debian', 'Ubuntu']
-      - (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+      - caddy_enabled | default(false) | bool
       - thelounge_directory is match('^/[a-zA-Z0-9/_-]+$')
       - thelounge_hostname is defined
       - thelounge_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
@@ -15,3 +15,9 @@
       The Lounge requires Debian/Ubuntu, Caddy, an absolute deployment path,
       thelounge_hostname in a DNS zone you control, an unprivileged port,
       and an IANA timezone name.
+
+- name: Validate the The Lounge container image
+  ansible.builtin.assert:
+    that:
+      - thelounge_image is string
+    quiet: true

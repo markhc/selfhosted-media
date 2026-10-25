@@ -9,9 +9,7 @@ its own hostname to Caddy; see [How services publish a site](#how-services-publi
 ## Enable
 
 ```yaml
-selfhosted_services:
-  caddy:
-    enabled: true
+caddy_enabled: true
 ```
 
 Caddy requires the containerized [Tailscale](tailscale.md) host to be enrolled,
@@ -22,7 +20,7 @@ orders this automatically.
 ## Set up private HTTPS
 
 1. Replace the placeholder hostname of each selected service in your local
-   `group_vars/all.yml` (`thelounge_hostname`, `audiobookshelf_hostname`) with
+   `group_vars/nas.yml` (`thelounge_hostname`, `audiobookshelf_hostname`) with
    a hostname in a Cloudflare-managed zone you control. The example domain
    cannot obtain a certificate for your deployment.
 2. Create a Cloudflare API token scoped to that zone with **Zone / Zone / Read**
@@ -56,7 +54,7 @@ split DNS instead if you do not want to publish the A record.
 ## Optional LAN access
 
 For LAN access without Tailscale on the client, set `caddy_lan_ip` in
-`ansible/inventories/local/group_vars/all.yml` to the NAS's fixed RFC1918 LAN
+`ansible/inventories/local/group_vars/nas.yml` to the NAS's fixed RFC1918 LAN
 IPv4 address, then run `make deploy-caddy`. For example (placeholder address):
 
 ```yaml

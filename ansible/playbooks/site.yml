@@ -5,11 +5,14 @@
   gather_facts: true
 
   vars:
-    # Each service role is tagged with its selection key.
+    # Each service role is tagged with its name and selected by a boolean <name>_enabled.
+    selfhosted_service_names: [tailscale, caddy, thelounge, audiobookshelf, qbittorrent, znc]
+    selfhosted_service_flags: >-
+      {{ query('ansible.builtin.vars', *(selfhosted_service_names | map('regex_replace', '$', '_enabled')),
+      default=false) }}
     selfhosted_selected: >-
-      {{ (selfhosted_services | default({})) | dict2items
-      | selectattr('value.enabled', 'defined') | selectattr('value.enabled', 'equalto', true)
-      | map(attribute='key') | list }}
+      {{ selfhosted_service_names | zip(selfhosted_service_flags)
+      | selectattr(1, 'equalto', true) | map(attribute=0) | list }}
 
   pre_tasks:
     - name: Refuse a deployment in check mode
@@ -22,15 +25,22 @@
       tags:
         - always
 
+    - name: Refuse the former selection map
+      ansible.builtin.assert:
+        that:
+          - selfhosted_services is not defined
+        fail_msg: >-
+          selfhosted_services.<name>.enabled was replaced by flat <name>_enabled flags,
+          for example caddy_enabled: true. Update the local group variables; see
+          docs/getting-started.md#select-services.
+      tags:
+        - always
+
     - name: Validate the service selection
       ansible.builtin.assert:
         that:
-          - (selfhosted_services | default({})) is mapping
-          - >-
-            (selfhosted_services | default({})) | dict2items | map(attribute='value')
-            | map(attribute='enabled', default=false) | map('type_debug') | unique | difference(['bool'])
-            | length == 0
-        fail_msg: Set every selfhosted_services.<name>.enabled to true or false.
+          - selfhosted_service_flags | map('type_debug') | unique | difference(['bool']) | length == 0
+        fail_msg: Set each <service>_enabled flag to true or false.
       tags:
         - always
 

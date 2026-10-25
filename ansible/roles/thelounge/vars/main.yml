@@ -1,0 +1,5 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+thelounge_image: >-
+  {{ thelounge_image_repository
+  | container_image(thelounge_image_tag, thelounge_image_digest) }}

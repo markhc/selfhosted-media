@@ -10,7 +10,10 @@ media_hosts_instance_services:
   - sonarr
   - radarr
 
+# Services selected on this host by their <service>_enabled flags.
+media_hosts_candidates: "{{ media_hosts_services.keys() | list + media_hosts_instance_services }}"
 media_hosts_selected: >-
-  {{ (selfhosted_services | default({})) | dict2items
-  | selectattr('value.enabled', 'defined') | selectattr('value.enabled', 'equalto', true)
-  | map(attribute='key') | list }}
+  {{ media_hosts_candidates
+  | zip(query('ansible.builtin.vars', *(media_hosts_candidates | map('regex_replace', '$', '_enabled')),
+  default=false))
+  | selectattr(1, 'equalto', true) | map(attribute=0) | list }}

@@ -1,0 +1,5 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+audiobookshelf_image: >-
+  {{ audiobookshelf_image_repository
+  | container_image(audiobookshelf_image_tag, audiobookshelf_image_digest) }}

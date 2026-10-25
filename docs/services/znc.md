@@ -22,22 +22,19 @@ No VM is provisioned by this repository.
    commented example. Do not put it in `nas`. Copy
    `ansible/inventories/example/group_vars/irc_bouncers.yml` to your local
    `group_vars/` if upgrading an existing inventory; `make configure` never
-   overwrites an existing local inventory. Set `tailscale_hostname` per host
+   overwrites an existing local inventory. Set `tailscale_machine_name` per host
    for multiple VMs.
 3. In that local group file, explicitly enable both services:
 
    ```yaml
-   selfhosted_services:
-     tailscale:
-       enabled: true
-     znc:
-       enabled: true
-     caddy:
-       enabled: false
-     thelounge:
-       enabled: false
+   tailscale_enabled: true
+   znc_enabled: true
+   caddy_enabled: false
+   thelounge_enabled: false
+   audiobookshelf_enabled: false
+   qbittorrent_enabled: false
    nas_tailscale_auth_key_tags: ["tag:irc"]
-   tailscale_hostname: example-irc
+   tailscale_machine_name: example-irc
    ```
 
 4. Review the updated policy, then use `make policy-preview` and the appropriate

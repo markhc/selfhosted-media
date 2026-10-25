@@ -11,10 +11,8 @@ Select the service in the host's group variables and give each host a MagicDNS
 machine name:
 
 ```yaml
-selfhosted_services:
-  tailscale:
-    enabled: true
-tailscale_hostname: media-nas
+tailscale_enabled: true
+tailscale_machine_name: media-nas
 ```
 
 Hosts other than the NAS also set their enrollment tag, for example

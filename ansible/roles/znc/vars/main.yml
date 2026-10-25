@@ -1,0 +1,8 @@
+---
+# Image references from the repository, tag, and optional digest in defaults/main.yml.
+znc_image: >-
+  {{ znc_image_repository
+  | container_image(znc_image_tag, znc_image_digest) }}
+znc_acme_image: >-
+  {{ znc_acme_image_repository
+  | container_image(znc_acme_image_tag, znc_acme_image_digest) }}

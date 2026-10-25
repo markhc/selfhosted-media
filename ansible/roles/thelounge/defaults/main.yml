@@ -1,6 +1,9 @@
 ---
 thelounge_directory: /opt/selfhosted/thelounge
-thelounge_image: ghcr.io/thelounge/thelounge:4.5.2
+thelounge_image_repository: ghcr.io/thelounge/thelounge
+thelounge_image_tag: "4.5.2"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+thelounge_image_digest: ""
 thelounge_port: 9000
 # Container TZ; defaults to the shared selfhosted_timezone, else UTC.
 thelounge_timezone: "{{ selfhosted_timezone | default('UTC') }}"

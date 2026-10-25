@@ -1,9 +1,28 @@
 ---
-- name: Validate the Tailscale hostname
+- name: Reject the former machine name variable
   ansible.builtin.assert:
     that:
-      - tailscale_hostname is match('^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$')
+      - tailscale_hostname is not defined
+    fail_msg: >-
+      Rename tailscale_hostname to tailscale_machine_name in the local group or
+      host variables; the value is unchanged.
+
+- name: Validate the Tailscale machine name
+  ansible.builtin.assert:
+    that:
+      - tailscale_machine_name is defined
+      - tailscale_machine_name is match('^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$')
       - nas_tailscale_directory is match('^/[a-zA-Z0-9/_-]+$')
+    fail_msg: >-
+      Set tailscale_machine_name to this host's MagicDNS machine name (letters,
+      digits, and inner hyphens, at most 63 characters) and use an absolute
+      deployment path.
+
+- name: Validate the Tailscale container image
+  ansible.builtin.assert:
+    that:
+      - nas_tailscale_image is string
+    quiet: true
 
 - name: Validate enrollment credentials and existing state
   ansible.builtin.import_tasks: auth.yml

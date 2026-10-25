@@ -12,6 +12,8 @@ import unittest
 
 import yaml
 
+from rolefixture import run_play
+
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMP_ROOT = "/tmp/opencode" if Path("/tmp/opencode").is_dir() else None
@@ -106,6 +108,23 @@ class EnrollmentTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("HTTP 200", result.stdout)
 
+
+
+class MachineNameTests(unittest.TestCase):
+    def test_machine_name_is_validated_and_the_former_name_is_refused(self):
+        tasks = yaml.safe_load((ROOT / "ansible/roles/nas_tailscale/tasks/main.yml").read_text())[:2]
+        valid = {"tailscale_machine_name": "media-nas", "nas_tailscale_directory": "/opt/selfhosted/tailscale"}
+        cases = [({}, True), ({"tailscale_machine_name": "media_nas"}, False),
+                 ({"tailscale_machine_name": "-nas"}, False), ({"tailscale_hostname": "media-nas"}, False)]
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
+            result = run_play(temp, {"nas_tailscale_directory": "/opt/selfhosted/tailscale"}, tasks)
+            self.assertNotEqual(result.returncode, 0, result.stdout)
+            self.assertIn("Set tailscale_machine_name", result.stdout)
+            for extra, ok in cases:
+                with self.subTest(extra=extra):
+                    result = run_play(temp, {**valid, **extra}, tasks)
+                    self.assertEqual(result.returncode == 0, ok, result.stdout)
+            self.assertIn("Rename tailscale_hostname to tailscale_machine_name", result.stdout)
 
 if __name__ == "__main__":
     unittest.main()

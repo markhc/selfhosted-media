@@ -1,12 +1,16 @@
 ---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+qbittorrent_image: >-
+  {{ qbittorrent_image_repository
+  | container_image(qbittorrent_image_tag, qbittorrent_image_digest) }}
+
 # The WebUI binds to the loopback address that the media_hosts role assigns.
 qbittorrent_webui_address: "{{ media_hosts_addresses.qbittorrent }}"
 
 qbittorrent_conf_path: "{{ qbittorrent_directory }}/config/qBittorrent/config/qBittorrent.conf"
 
 # qui is the web UI when selected on the same host; otherwise Caddy publishes the WebUI.
-qbittorrent_published: >-
-  {{ not ((selfhosted_services | default({})).get('qui', {}).get('enabled', false) | bool) }}
+qbittorrent_published: "{{ not (qui_enabled | default(false) | bool) }}"
 
 # WebUI settings enforced on every deployment. Local and subnet authentication bypasses
 # stay off because Caddy and qui reach the WebUI from loopback.

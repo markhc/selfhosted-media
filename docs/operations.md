@@ -6,7 +6,7 @@ General guidance for running and maintaining deployed services. Each
 ## Service selection and removal
 
 Disabled services are skipped, not uninstalled. Turning off a
-`selfhosted_services.<name>.enabled` flag stops Ansible from managing that
+`<service>_enabled` flag stops Ansible from managing that
 service but leaves any existing deployment, data, and timers in place; stop
 them explicitly with Compose on the host if they were already deployed.
 
@@ -25,6 +25,54 @@ sudo docker compose --project-directory /opt/selfhosted/audiobookshelf \
   --project-name selfhosted-audiobookshelf down
 sudo rm /opt/selfhosted/caddy/conf/sites/audiobookshelf.caddy
 ```
+
+## Container images
+
+Every service runs a pinned image. The example group files set each image's
+repository and tag in its service's section, with the same values as the role
+defaults; an inventory without them uses those defaults. The variables are
+named after these prefixes:
+
+| Image | Prefix |
+| --- | --- |
+| [Tailscale](services/tailscale.md) | `nas_tailscale` |
+| [Caddy](services/caddy.md) base images | `caddy` |
+| [The Lounge](services/thelounge.md) | `thelounge` |
+| [Audiobookshelf](services/audiobookshelf.md) | `audiobookshelf` |
+| [qBittorrent](services/qbittorrent.md) | `qbittorrent` |
+| [ZNC](services/znc.md) | `znc` |
+| ZNC certificate renewal | `znc_acme` |
+
+- `<prefix>_image_repository` is the image name, including a registry for a
+  mirror, for example `registry.example.com/mirror/qbittorrent-nox`.
+- `<prefix>_image_tag` is the tag. Quote it, because YAML reads `5.3` as a
+  number. `latest` and an empty tag are refused unless a digest is set.
+- `<prefix>_image_digest` optionally pins the exact image as
+  `sha256:<64 hex digits>`. Docker then ignores the tag, which only records
+  the version. Use the digest that
+  `docker buildx imagetools inspect <repository>:<tag>` prints on its
+  `Digest:` line, which is valid on every architecture.
+
+```yaml
+# Placeholder digest; use the one printed for your image.
+qbittorrent_image_tag: "5.3.0-2"
+qbittorrent_image_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+```
+
+Caddy is built on the NAS from the official builder and base images, so
+`caddy_version` is both their tag (`2.11.7-builder` and `2.11.7`) and the Caddy
+release that is compiled. `caddy_image_digest` and `caddy_builder_image_digest`
+pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
+
+- A replacement must work like the default image: the same paths, user,
+  environment variables, and commands. A different image family, such as a
+  hotio or linuxserver image instead of the official qBittorrent one, uses
+  other paths and user handling and does not work by changing the repository.
+- To upgrade, change the tag (and digest) and run `make deploy-<service>`;
+  Compose pulls the new image and recreates the container. Tags set in the
+  local inventory stay where they are when this repository raises a default,
+  so compare them with the example inventory after updating. Most services
+  migrate their data forward only, so back up first and do not downgrade.
 
 ## Persistent data and backups
 

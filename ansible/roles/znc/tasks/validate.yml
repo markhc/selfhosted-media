@@ -81,3 +81,10 @@
   loop_control:
     loop_var: znc_user_network
   no_log: true
+
+- name: Validate the ZNC container images
+  ansible.builtin.assert:
+    that:
+      - znc_image is string
+      - znc_acme_image is string
+    quiet: true

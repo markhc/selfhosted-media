@@ -12,19 +12,12 @@ otherwise Caddy publishes the qBittorrent WebUI.
 
 ```yaml
 # group_vars/nas.yml
-selfhosted_services:
-  caddy:
-    enabled: true   # Required only while qui is not selected
-  qbittorrent:
-    enabled: true
-
 selfhosted_data_path: /srv/data
-qbittorrent_confirm_legal_notice: true
-```
+caddy_enabled: true   # Required only while qui is not selected
 
-```yaml
-# group_vars/all.yml (only while qui is not selected)
-qbittorrent_hostname: torrents.example.com
+qbittorrent_enabled: true
+qbittorrent_confirm_legal_notice: true
+qbittorrent_hostname: torrents.example.com   # Used only while qui is not selected
 ```
 
 ```yaml
@@ -50,7 +43,7 @@ for the hostname before deploying. See
 | `qbittorrent_address` | `127.10.0.1` | Loopback address of the WebUI and API; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
 | `qbittorrent_webui_port` | `8080` | WebUI and API port |
 | `qbittorrent_torrenting_port` | `6881` | Peer port on every interface (TCP and UDP) |
-| `qbittorrent_image` | pinned `5.3.0-2` | Official image tag |
+| `qbittorrent_image_repository` / `_tag` / `_digest` | official image, pinned | See [Container images](../operations.md#container-images) |
 
 ## Managed settings
 
@@ -92,7 +85,7 @@ downloads under `/data`; the general steps are in
 
 1. Check the old version, for example with
    `sudo docker exec <old-container> qbittorrent-nox --version`, and set
-   `qbittorrent_image` to the same or a newer tag.
+   `qbittorrent_image_tag` to the same or a newer tag.
 2. Set `selfhosted_data_path` to the host directory the old container mounts
    at `/data`, and the vaulted credentials. They replace the old WebUI login.
 3. Stop the old container with a long timeout so it finishes writing resume
@@ -128,7 +121,8 @@ make deploy-qbittorrent   # Docker and qBittorrent; Caddy first while qui is not
 make deploy               # The full selected stack
 ```
 
-To upgrade, change `qbittorrent_image` to a newer pinned tag and redeploy.
+To upgrade, change `qbittorrent_image_tag` to a newer release and redeploy; see
+[Container images](../operations.md#container-images).
 The container gets up to 30 minutes to stop so it can save resume data.
 
 ## Network exposure

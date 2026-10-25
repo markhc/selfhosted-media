@@ -6,11 +6,8 @@ through [Caddy](caddy.md). It is not a public IRC relay.
 ## Enable
 
 ```yaml
-selfhosted_services:
-  caddy:
-    enabled: true
-  thelounge:
-    enabled: true
+caddy_enabled: true
+thelounge_enabled: true
 thelounge_hostname: lounge.example.com
 ```
 

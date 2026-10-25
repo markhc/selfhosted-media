@@ -1,15 +1,13 @@
 ---
+# Settings for every host. Service selections and service settings belong in
+# the group files (nas.yml, irc_bouncers.yml), not here.
+
 # IANA timezone for service containers (log timestamps, schedules),
-# e.g. "America/Sao_Paulo". 
+# e.g. "America/Sao_Paulo".
 # Override one service with <service>_timezone.
 selfhosted_timezone: UTC
 
-# Replace in the ignored local inventory with a domain you control.
+# Service hostnames.
+qbittorrent_hostname: qbittorrent.example.com
 thelounge_hostname: lounge.example.com
 audiobookshelf_hostname: audiobooks.example.com
-# Used only while qui is not selected; qui replaces the qBittorrent WebUI.
-qbittorrent_hostname: torrents.example.com
-
-# Optional: also serve HTTPS on the NAS's fixed LAN IPv4 without client Tailscale.
-# Leave empty for Tailscale-only access. Example placeholder: "192.168.50.10".
-caddy_lan_ip: ""

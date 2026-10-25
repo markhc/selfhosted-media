@@ -16,7 +16,8 @@ from rolefixture import ROOT, TEMP_ROOT, run_play, run_role
 
 PASSWORD = "fake-qbittorrent-password-for-tests"
 SETTINGS = {
-    "selfhosted_services": {"caddy": {"enabled": True}, "qbittorrent": {"enabled": True}},
+    "caddy_enabled": True,
+    "qbittorrent_enabled": True,
     "selfhosted_data_path": "/srv/example data/$data",
     "qbittorrent_confirm_legal_notice": True,
     "qbittorrent_hostname": "torrents.example.com",
@@ -90,10 +91,9 @@ class QbittorrentTests(unittest.TestCase):
         self.assertEqual(service["extra_hosts"], ["qbittorrent:127.10.0.1"])
 
     def test_peers_resolve_by_name_and_address_can_be_overridden(self):
-        services = {**SETTINGS["selfhosted_services"], "sonarr": {"enabled": True}}
         instances = [{"name": "tv", "address": "127.10.1.1"}, {"name": "anime", "address": "127.10.1.2"}]
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            variables = {**SETTINGS, "selfhosted_services": services, "sonarr_instances": instances,
+            variables = {**SETTINGS, "sonarr_enabled": True, "sonarr_instances": instances,
                          "qbittorrent_address": "127.10.9.9"}
             result = run_role("qbittorrent", temp, variables, ("compose.yml", "qBittorrent.conf"))
             self.assertEqual(result.returncode, 0, result.stdout)
@@ -183,7 +183,7 @@ class QbittorrentTests(unittest.TestCase):
         self.assertEqual(unpublish["ansible.builtin.include_role"]["tasks_from"], "unpublish")
         self.assertEqual(unpublish["vars"], {"caddy_site_name": "qbittorrent"})
         # Without qui, Caddy and a hostname are required; with qui, neither is.
-        with_qui = {"selfhosted_services": {"qbittorrent": {"enabled": True}, "qui": {"enabled": True}}}
+        with_qui = {"caddy_enabled": False, "qui_enabled": True}
         without_hostname = {key: value for key, value in SETTINGS.items() if key != "qbittorrent_hostname"}
         result = run_role("qbittorrent", self.directory, {**without_hostname, **with_qui})
         self.assertEqual(result.returncode, 0, result.stdout)
@@ -194,7 +194,7 @@ class QbittorrentTests(unittest.TestCase):
         cases = [
             {"qbittorrent_confirm_legal_notice": False},
             {"qbittorrent_confirm_legal_notice": "yes"},
-            {"selfhosted_services": {"qbittorrent": {"enabled": True}}},
+            {"caddy_enabled": False},
             {"qbittorrent_hostname": "Not A Hostname"},
             {"qbittorrent_webui_port": 80},
             {"qbittorrent_torrenting_port": 8080},

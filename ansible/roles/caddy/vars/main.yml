@@ -1,0 +1,8 @@
+---
+# Official images the custom build starts from; see defaults/main.yml.
+caddy_builder_image: >-
+  {{ caddy_image_repository
+  | container_image(caddy_version ~ '-builder', caddy_builder_image_digest) }}
+caddy_base_image: >-
+  {{ caddy_image_repository
+  | container_image(caddy_version, caddy_image_digest) }}

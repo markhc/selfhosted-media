@@ -4,7 +4,12 @@ caddy_directory: /opt/selfhosted/caddy
 caddy_lan_ip: ""
 # Container TZ; defaults to the shared selfhosted_timezone, else UTC.
 caddy_timezone: "{{ selfhosted_timezone | default('UTC') }}"
-caddy_version: 2.11.7
+# The Caddy release, which is also the tag of the official builder and base images.
+caddy_version: "2.11.7"
+caddy_image_repository: caddy
+# Optional sha256 digests that pin the exact base and builder images.
+caddy_image_digest: ""
+caddy_builder_image_digest: ""
 caddy_cloudflare_version: v0.2.4
 caddy_cloudflare_api_token: ""
 caddy_acme_ca: https://acme-v02.api.letsencrypt.org/directory

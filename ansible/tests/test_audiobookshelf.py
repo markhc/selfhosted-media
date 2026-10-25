@@ -14,7 +14,8 @@ LIBRARIES = [
     {"name": "podcasts", "path": "/srv/example/podcasts", "read_only": False},
 ]
 SETTINGS = {
-    "selfhosted_services": {"caddy": {"enabled": True}, "audiobookshelf": {"enabled": True}},
+    "caddy_enabled": True,
+    "audiobookshelf_enabled": True,
     "audiobookshelf_hostname": "audiobooks.example.com",
     "audiobookshelf_libraries": LIBRARIES,
 }
@@ -56,7 +57,7 @@ class AudiobookshelfTests(unittest.TestCase):
 
     def test_invalid_inputs_fail(self):
         cases = [
-            {"selfhosted_services": {"audiobookshelf": {"enabled": True}}},
+            {"caddy_enabled": False},
             {"audiobookshelf_hostname": "Not A Hostname"},
             {"audiobookshelf_port": 80},
             {"audiobookshelf_uid": 0},

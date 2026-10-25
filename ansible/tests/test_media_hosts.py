@@ -8,9 +8,10 @@ import unittest
 from rolefixture import TEMP_ROOT, run_play
 
 
-SERVICES = {"qbittorrent": {"enabled": True}, "sonarr": {"enabled": True}, "radarr": {"enabled": True}}
 SETTINGS = {
-    "selfhosted_services": SERVICES,
+    "qbittorrent_enabled": True,
+    "sonarr_enabled": True,
+    "radarr_enabled": True,
     "sonarr_instances": [{"name": "tv", "address": "127.10.1.1"}, {"name": "anime", "address": "127.10.1.2"}],
     "radarr_instances": [{"name": "hd", "address": "127.10.2.1"}, {"name": "uhd", "address": "127.10.2.2"}],
 }
@@ -43,13 +44,12 @@ class MediaHostsTests(unittest.TestCase):
             "radarr-hd": "127.10.2.1", "radarr-uhd": "127.10.2.2"})
 
     def test_unselected_services_are_left_out(self):
-        services = {**SERVICES, "radarr": {"enabled": False}, "qui": {"enabled": True}}
-        result, addresses = resolve(self.temp.name, {**SETTINGS, "selfhosted_services": services,
+        result, addresses = resolve(self.temp.name, {**SETTINGS, "radarr_enabled": False, "qui_enabled": True,
                                                      "qui_address": "127.10.0.20"})
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(addresses, {"qbittorrent": "127.10.0.1", "qui": "127.10.0.20",
                                      "sonarr-tv": "127.10.1.1", "sonarr-anime": "127.10.1.2"})
-        result, addresses = resolve(self.temp.name, {"selfhosted_services": {"caddy": {"enabled": True}}})
+        result, addresses = resolve(self.temp.name, {"caddy_enabled": True})
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(addresses, {})
 

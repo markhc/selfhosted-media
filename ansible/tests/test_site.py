@@ -1,5 +1,7 @@
 """Offline checks for service selection in the site playbook."""
 
+import json
+import re
 import tempfile
 import unittest
 
@@ -22,15 +24,43 @@ def expression(source):
     return env.compile_expression(source.strip().removeprefix("{{").removesuffix("}}"))
 
 
-def selected(services):
-    return expression(PLAY["vars"]["selfhosted_selected"])(selfhosted_services=services)
+SHOW = {"name": "Show fixture", "ansible.builtin.debug": {"msg": "SELECTED={{ selfhosted_selected | to_json }}"}}
+VALIDATION = [task for task in PLAY["pre_tasks"] if task["name"] in (
+    "Refuse the former selection map", "Validate the service selection")]
+
+
+def run_selection(directory, flags, tasks=(SHOW,)):
+    return run_play(directory, {**PLAY["vars"], **flags}, list(tasks))
+
+
+def selected(directory, flags):
+    result = run_selection(directory, flags)
+    match = re.search(r'"SELECTED=(.*)"$', result.stdout, re.MULTILINE)
+    if result.returncode or not match:
+        raise AssertionError(result.stdout)
+    return json.loads(match.group(1).replace('\\"', '"'))
+
+
+def group_vars(group):
+    return yaml.safe_load((ROOT / f"ansible/inventories/example/group_vars/{group}.yml").read_text())
 
 
 class SiteSelectionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(prefix="site-test-", dir=TEMP_ROOT)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp.cleanup()
+
     def test_only_explicitly_enabled_services_are_selected(self):
-        self.assertEqual(selected({}), [])
-        self.assertEqual(selected({"caddy": {"enabled": True}, "thelounge": {"enabled": False},
-                                   "znc": {}, "plex": None}), ["caddy"])
+        self.assertEqual(selected(self.temp.name, {}), [])
+        self.assertEqual(selected(self.temp.name, {"caddy_enabled": True, "thelounge_enabled": False,
+                                                   "plex_enabled": True}), ["caddy"])
+        self.assertEqual(PLAY["vars"]["selfhosted_service_names"],
+                         ["tailscale" if role == "nas_tailscale" else role
+                          for role in ROLES if role != "docker_runtime"])
 
     def test_each_service_role_is_tagged_and_gated_by_its_own_key(self):
         for name in ("caddy", "thelounge", "audiobookshelf", "qbittorrent", "znc"):
@@ -51,23 +81,26 @@ class SiteSelectionTests(unittest.TestCase):
         self.assertFalse(runtime(selfhosted_selected=[], ansible_run_tags=["all"]))
 
     def test_selection_flags_must_be_booleans(self):
-        validation = next(task for task in PLAY["pre_tasks"] if task["name"] == "Validate the service selection")
-        cases = [({"caddy": {"enabled": True}, "znc": {"enabled": False}, "plex": None}, True),
-                 ({}, True), ({"caddy": {"enabled": "true"}}, False), ({"caddy": {"enabled": 1}}, False),
-                 (["caddy"], False)]
-        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            for services, valid in cases:
-                with self.subTest(services=services):
-                    result = run_play(temp, {"selfhosted_services": services}, [validation])
-                    self.assertEqual(result.returncode == 0, valid, result.stdout)
+        cases = [({"caddy_enabled": True, "znc_enabled": False}, True), ({}, True),
+                 ({"caddy_enabled": "true"}, False), ({"caddy_enabled": 1}, False),
+                 ({"selfhosted_services": {"caddy": {"enabled": True}}}, False)]
+        for flags, valid in cases:
+            with self.subTest(flags=flags):
+                result = run_selection(self.temp.name, flags, VALIDATION)
+                self.assertEqual(result.returncode == 0, valid, result.stdout)
 
     def test_example_selections_are_booleans_and_bouncer_selects_nothing(self):
+        names = PLAY["vars"]["selfhosted_service_names"]
         for group in ("nas", "irc_bouncers"):
-            settings = yaml.safe_load((ROOT / f"ansible/inventories/example/group_vars/{group}.yml").read_text())
-            for service in settings["selfhosted_services"].values():
-                self.assertIsInstance(service["enabled"], bool)
-        bouncer = yaml.safe_load((ROOT / "ansible/inventories/example/group_vars/irc_bouncers.yml").read_text())
-        self.assertFalse(selected(bouncer["selfhosted_services"]))
+            settings = group_vars(group)
+            with self.subTest(group=group):
+                self.assertNotIn("selfhosted_services", settings)
+                self.assertEqual(sorted(key for key in settings if key.endswith("_enabled")),
+                                 sorted(name + "_enabled" for name in names))
+                for name in names:
+                    self.assertIsInstance(settings[name + "_enabled"], bool)
+        self.assertFalse([key for key in group_vars("all") if key.endswith("_enabled")])
+        self.assertEqual(selected(self.temp.name, group_vars("irc_bouncers")), [])
 
 
 if __name__ == "__main__":

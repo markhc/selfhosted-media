@@ -1,31 +1,11 @@
 ---
-selfhosted_services:
-  tailscale:
-    enabled: true
-  caddy:
-    enabled: true
-  thelounge:
-    enabled: true
-  audiobookshelf:
-    enabled: true
-  qbittorrent:
-    enabled: false
-  znc:
-    enabled: false
+# Each service is skipped unless its <service>_enabled flag is true. Keep a
+# service's flag and settings together in its section below.
+#
+# Each section pins its container image. Change the tag to upgrade, and add
+# <prefix>_image_digest to pin an exact image; see docs/operations.md#container-images.
 
-# This becomes the NAS machine name in MagicDNS.
-tailscale_hostname: media-nas
-
-# Audiobookshelf media folders. Each existing NAS directory appears inside the
-# container at /media/<name>; add libraries in the web UI using those paths.
-# Libraries are read-only unless read_only is false (podcast downloads, uploads).
-audiobookshelf_libraries: []
-# audiobookshelf_libraries:
-#   - name: audiobooks
-#     path: /srv/media/audiobooks
-#   - name: podcasts
-#     path: /srv/media/podcasts
-#     read_only: false
+# --- Shared by several services ---
 
 # Shared media data root for qBittorrent and the services that import its downloads.
 # It must already exist on one filesystem, holding for example torrents/ and media/;
@@ -37,7 +17,51 @@ selfhosted_data_path: ""
 # selfhosted_data_gid: 1000
 # selfhosted_data_umask: "002"
 
+# --- Tailscale (docs/services/tailscale.md) ---
+tailscale_enabled: true
+nas_tailscale_image_repository: tailscale/tailscale
+nas_tailscale_image_tag: "v1.104.2"
+# This becomes the NAS machine name in MagicDNS.
+tailscale_machine_name: media-nas
+
+# --- Caddy (docs/services/caddy.md) ---
+caddy_enabled: true
+caddy_image_repository: caddy
+# The Caddy release; also the tag of its official builder and base images.
+caddy_version: "2.11.7"
+caddy_cloudflare_version: "v0.2.4"
+# Optional: also serve HTTPS on the NAS's fixed LAN IPv4 without client Tailscale.
+# Leave empty for Tailscale-only access. Example placeholder: "192.168.50.10".
+caddy_lan_ip: ""
+
+# --- The Lounge (docs/services/thelounge.md) ---
+thelounge_enabled: true
+thelounge_image_repository: ghcr.io/thelounge/thelounge
+thelounge_image_tag: "4.5.2"
+
+# --- Audiobookshelf (docs/services/audiobookshelf.md) ---
+audiobookshelf_enabled: true
+audiobookshelf_image_repository: ghcr.io/advplyr/audiobookshelf
+audiobookshelf_image_tag: "2.37.2"
+# Audiobookshelf media folders. Each existing NAS directory appears inside the
+# container at /media/<name>; add libraries in the web UI using those paths.
+# Libraries are read-only unless read_only is false (podcast downloads, uploads).
+audiobookshelf_libraries: []
+# audiobookshelf_libraries:
+#   - name: audiobooks
+#     path: /srv/media/audiobooks
+#   - name: podcasts
+#     path: /srv/media/podcasts
+#     read_only: false
+
+# --- qBittorrent (docs/services/qbittorrent.md) ---
+qbittorrent_enabled: false
+qbittorrent_image_repository: qbittorrentofficial/qbittorrent-nox
+qbittorrent_image_tag: "5.2.4-2"
 # Set to true after reading qBittorrent's legal notice in docs/services/qbittorrent.md.
 qbittorrent_confirm_legal_notice: false
 # Each media service listens on its own loopback address; see docs/media-stack.md.
 # qbittorrent_address: 127.10.0.1
+
+# --- ZNC (docs/services/znc.md); runs on a separate bouncer host ---
+znc_enabled: false

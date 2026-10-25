@@ -7,7 +7,7 @@
   pre_tasks:
     - name: Skip hosts without selected Tailscale services
       ansible.builtin.meta: end_host
-      when: not ((selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool)
+      when: not (tailscale_enabled | default(false) | bool)
 
   tasks:
     - name: Find the Tailscale container

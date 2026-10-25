@@ -1,6 +1,9 @@
 ---
 audiobookshelf_directory: /opt/selfhosted/audiobookshelf
-audiobookshelf_image: ghcr.io/advplyr/audiobookshelf:2.37.2
+audiobookshelf_image_repository: ghcr.io/advplyr/audiobookshelf
+audiobookshelf_image_tag: "2.37.2"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+audiobookshelf_image_digest: ""
 audiobookshelf_port: 13378
 # Container TZ; defaults to the shared selfhosted_timezone, else UTC.
 audiobookshelf_timezone: "{{ selfhosted_timezone | default('UTC') }}"

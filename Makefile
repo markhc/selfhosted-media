@@ -73,7 +73,7 @@ deploy: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
 	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) $(BECOME_ARGS) --extra-vars @$(VAULT_FILE) \
 		ansible/playbooks/site.yml $(ANSIBLE_ARGS)
 
-# Each service role is tagged with its selfhosted_services key.
+# Each service role is tagged with the name of its <service>_enabled flag.
 deploy-%: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
 	@$(MAKE) --no-print-directory require-apply-mode
 	@$(MAKE) --no-print-directory require-vault

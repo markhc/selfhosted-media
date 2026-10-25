@@ -57,10 +57,16 @@
 - name: Validate the qBittorrent WebUI publication
   ansible.builtin.assert:
     that:
-      - (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+      - caddy_enabled | default(false) | bool
       - qbittorrent_hostname is defined
       - qbittorrent_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
     fail_msg: >-
       Without qui on this host, the qBittorrent WebUI is published through Caddy:
       enable Caddy and set qbittorrent_hostname in a DNS zone you control.
   when: qbittorrent_published | bool
+
+- name: Validate the qBittorrent container image
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_image is string
+    quiet: true

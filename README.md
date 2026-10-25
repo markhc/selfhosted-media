@@ -40,5 +40,4 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [qBittorrent](docs/services/qbittorrent.md) | `qbittorrent` | NAS | BitTorrent client for the media stack |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
-Enable each service with `selfhosted_services.<key>.enabled` in the local
-inventory; see [Select services](docs/getting-started.md#select-services).
+Enable each service with its `<key>_enabled` flag in the local inventory; see [Select services](docs/getting-started.md#select-services).

@@ -1,6 +1,9 @@
 ---
 znc_directory: /opt/selfhosted/znc
-znc_image: znc:1.10.3-slim
+znc_image_repository: znc
+znc_image_tag: "1.10.3-slim"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+znc_image_digest: ""
 znc_uid: 10000
 znc_gid: 10000
 znc_port: 6697
@@ -18,7 +21,10 @@ znc_tls_certificate_days: 365
 znc_tls_renew_before_days: 30
 
 # Cloudflare mode only. Enabling it accepts the Let's Encrypt subscriber terms.
-znc_acme_image: certbot/dns-cloudflare:v5.8.0
+znc_acme_image_repository: certbot/dns-cloudflare
+znc_acme_image_tag: "v5.8.0"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+znc_acme_image_digest: ""
 znc_acme_email: ""
 znc_acme_dns_propagation_seconds: 60
 

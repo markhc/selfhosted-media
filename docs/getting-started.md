@@ -39,14 +39,15 @@ adjust the group variables:
 
 | File | Purpose |
 | --- | --- |
-| `group_vars/all.yml` | Shared settings |
-| `group_vars/nas.yml` | NAS service selections |
-| `group_vars/irc_bouncers.yml` | Optional bouncer host service selections |
+| `group_vars/all.yml` | Settings for every host, such as the timezone |
+| `group_vars/nas.yml` | NAS service selections and settings, one section per service |
+| `group_vars/irc_bouncers.yml` | Optional bouncer host service selections and settings |
 | `vault.yml` | Encrypted credentials; edit with `make vault-edit` |
 
-Existing local inventories with NAS service selections in `all.yml` continue to
-work; move those selections to `nas.yml` before adding other hosts so they do
-not inherit NAS-specific settings. `make configure` never overwrites an existing
+Keep service flags out of `all.yml`: a flag there would select the service on
+every host. Service settings such as hostnames may stay in an existing
+`all.yml`, but new examples keep them in their service's section of the group
+file. `make configure` never overwrites an existing
 local inventory, so copy new example group files manually when upgrading. Use
 `make vault-edit` whenever a token changes. The entire local inventory is
 ignored by Git because it can identify private infrastructure.
@@ -58,27 +59,29 @@ stack must follow [Migrate from the combined web stack](operations.md#migrate-fr
 
 ## Select services
 
-Each service has its own `selfhosted_services.<name>.enabled` setting in the
-inventory, for example:
+Each service has its own `<service>_enabled` flag, kept at the top of that
+service's section in the group file next to its other settings, for example:
 
 ```yaml
-selfhosted_services:
-  tailscale:
-    enabled: true
-  caddy:
-    enabled: true
-  thelounge:
-    enabled: true
-  audiobookshelf:
-    enabled: true
-  znc:
-    enabled: false
+# --- The Lounge ---
+thelounge_enabled: true
+thelounge_hostname: lounge.example.com
+
+# --- ZNC ---
+znc_enabled: false
 ```
 
-Set a service to `false` to skip it without changing the playbook. Values must
-be YAML booleans (`true`/`false`). A service runs on every host whose
-group or host variables enable it, so keep NAS and bouncer selections in their
-own group files. Review each
+The keys are `tailscale`, `caddy`, `thelounge`, `audiobookshelf`,
+`qbittorrent`, and `znc`; an unset flag means disabled. Set a flag to `false`
+to skip the service without changing the playbook. Values must be YAML booleans
+(`true`/`false`), not quoted strings. A service runs on every host whose group
+or host variables enable it, so keep NAS and bouncer selections in their own
+group files.
+
+Inventories from before this layout used a `selfhosted_services` map
+(`selfhosted_services.caddy.enabled`). `make deploy` refuses to run while that
+map is defined; replace each entry with the matching flag, such as
+`caddy_enabled: true`. Review each
 selected service's guide for its prerequisites and dependencies before
 deploying; for example, the web services require the
 [Caddy DNS steps](services/caddy.md#set-up-private-https). Disabling a service

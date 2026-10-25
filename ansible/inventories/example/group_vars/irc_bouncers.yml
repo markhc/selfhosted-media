@@ -1,24 +1,30 @@
 ---
-# Adding a VM alone deploys nothing. Enable each wanted service explicitly.
-selfhosted_services:
-  tailscale:
-    enabled: false
-  znc:
-    enabled: false
-  caddy:
-    enabled: false
-  thelounge:
-    enabled: false
-  audiobookshelf:
-    enabled: false
-  qbittorrent:
-    enabled: false
+# Each section pins its container image. Change the tag to upgrade, and add
+# <prefix>_image_digest to pin an exact image; see docs/operations.md#container-images.
 
+# Adding a VM alone deploys nothing. Enable each wanted service explicitly.
+# The NAS services stay off here even if a flag is ever set in all.yml.
+caddy_enabled: false
+thelounge_enabled: false
+audiobookshelf_enabled: false
+qbittorrent_enabled: false
+
+# --- Tailscale (docs/services/tailscale.md) ---
+tailscale_enabled: false
+nas_tailscale_image_repository: tailscale/tailscale
+nas_tailscale_image_tag: "v1.104.2"
 # Override per host when deploying multiple bouncers.
-tailscale_hostname: example-irc
+tailscale_machine_name: example-irc
 nas_tailscale_auth_key_tags:
   - tag:irc
 
+# --- ZNC (docs/services/znc.md) ---
+znc_enabled: false
+znc_image_repository: znc
+znc_image_tag: "1.10.3-slim"
+# Certbot image that renews the certificate in cloudflare mode.
+znc_acme_image_repository: certbot/dns-cloudflare
+znc_acme_image_tag: "v5.8.0"
 # Default requires no public domain or DNS credential.
 znc_tls_mode: self_signed
 # Optional full DNS SAN in self_signed mode; required public hostname in cloudflare mode.

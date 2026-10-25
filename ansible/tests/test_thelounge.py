@@ -10,7 +10,8 @@ from rolefixture import TEMP_ROOT, run_role
 
 
 SETTINGS = {
-    "selfhosted_services": {"caddy": {"enabled": True}, "thelounge": {"enabled": True}},
+    "caddy_enabled": True,
+    "thelounge_enabled": True,
     "thelounge_hostname": "lounge.example.com",
 }
 
@@ -56,7 +57,7 @@ class TheLoungeTests(unittest.TestCase):
                 self.assertEqual(compose["services"]["thelounge"]["environment"], {"TZ": expected})
 
     def test_invalid_inputs_fail(self):
-        for extra in ({"selfhosted_services": {"thelounge": {"enabled": True}}},
+        for extra in ({"caddy_enabled": False},
                       {"thelounge_hostname": "Not A Hostname"}, {"thelounge_port": 80},
                       {"selfhosted_timezone": "Not A Timezone"}):
             with self.subTest(extra=extra):
