@@ -8,6 +8,7 @@ caddy_enabled: false
 thelounge_enabled: false
 audiobookshelf_enabled: false
 qbittorrent_enabled: false
+qui_enabled: false
 
 # --- Tailscale (docs/services/tailscale.md) ---
 tailscale_enabled: false

@@ -9,5 +9,6 @@ selfhosted_timezone: UTC
 
 # Service hostnames.
 qbittorrent_hostname: qbittorrent.example.com
+qui_hostname: qui.example.com
 thelounge_hostname: lounge.example.com
 audiobookshelf_hostname: audiobooks.example.com

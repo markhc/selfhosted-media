@@ -241,22 +241,17 @@ class QbittorrentTests(unittest.TestCase):
                 self.assertNotIn(secret, result.stdout)
         self.assertNotIn(PASSWORD, self.result.stdout)
 
-    def test_publication_depends_on_qui_selection(self):
+    def test_webui_stays_published_next_to_qui(self):
         tasks = {task["name"]: task for task in yaml.safe_load(
             (ROOT / "ansible/roles/qbittorrent/tasks/main.yml").read_text())}
         publish = tasks["Publish the qBittorrent WebUI through Caddy"]
-        unpublish = tasks["Unpublish the qBittorrent WebUI in favor of qui"]
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"]["caddy_site_upstream"],
                          "{{ qbittorrent_webui_address }}:{{ qbittorrent_webui_port }}")
-        self.assertEqual(unpublish["ansible.builtin.include_role"]["tasks_from"], "unpublish")
-        self.assertEqual(unpublish["vars"], {"caddy_site_name": "qbittorrent"})
-        # Without qui, Caddy and a hostname are required; with qui, neither is.
-        with_qui = {"caddy_enabled": False, "qui_enabled": True}
+        self.assertEqual(publish["when"], "not ansible_check_mode")
+        # The fallback WebUI needs Caddy and a hostname even when qui is selected.
         without_hostname = {key: value for key, value in SETTINGS.items() if key != "qbittorrent_hostname"}
-        result = run_role("qbittorrent", self.directory, {**without_hostname, **with_qui})
-        self.assertEqual(result.returncode, 0, result.stdout)
-        result = run_role("qbittorrent", self.directory, without_hostname)
+        result = run_role("qbittorrent", self.directory, {**without_hostname, "qui_enabled": True})
         self.assertNotEqual(result.returncode, 0, result.stdout)
 
     def test_invalid_inputs_fail(self):

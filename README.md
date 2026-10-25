@@ -38,6 +38,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [The Lounge](docs/services/thelounge.md) | `thelounge` | NAS | Private web IRC client |
 | [Audiobookshelf](docs/services/audiobookshelf.md) | `audiobookshelf` | NAS | Private audiobook and podcast server |
 | [qBittorrent](docs/services/qbittorrent.md) | `qbittorrent` | NAS | BitTorrent client for the media stack |
+| [qui](docs/services/qui.md) | `qui` | NAS | Web interface and client proxy for qBittorrent |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
 Enable each service with its `<key>_enabled` flag in the local inventory; see [Select services](docs/getting-started.md#select-services).

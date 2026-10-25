@@ -1,0 +1,21 @@
+---
+qui_directory: /opt/selfhosted/qui
+qui_image_repository: ghcr.io/autobrr/qui
+qui_image_tag: "v1.33.1"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+qui_image_digest: ""
+qui_port: 7476
+# ERROR, WARN, INFO, DEBUG, or TRACE; qui itself defaults to DEBUG.
+qui_log_level: INFO
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+qui_timezone: "{{ selfhosted_timezone | default('UTC') }}"
+# qui sees the shared media data root and qBittorrent's additional mounts at the
+# same container paths as qBittorrent, for orphan scans and cross-seed hardlinks.
+qui_data_path: "{{ selfhosted_data_path | default('') }}"
+qui_data_container_path: "{{ selfhosted_data_container_path | default('/data') }}"
+qui_uid: "{{ selfhosted_data_uid | default(1000) }}"
+qui_gid: "{{ selfhosted_data_gid | default(1000) }}"
+qui_umask: "{{ selfhosted_data_umask | default('002') }}"
+# Each entry bind-mounts an existing host directory (path) at an absolute container path
+# (target), read-only unless read_only is false.
+qui_mounts: "{{ qbittorrent_mounts | default([]) }}"

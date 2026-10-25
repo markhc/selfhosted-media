@@ -5,19 +5,20 @@ client of the [media stack](../media-stack.md). It runs headless on the NAS
 with the official
 [qbittorrent-nox image](https://github.com/qbittorrent/docker-qbittorrent-nox),
 downloads into the shared data root, and exposes its WebUI and API on its own
-loopback address as `qbittorrent:8080` to the other media services. When qui is selected on the same host, qui is the web interface;
-otherwise Caddy publishes the qBittorrent WebUI.
+loopback address as `qbittorrent:8080` to the other media services. Caddy
+publishes the WebUI at its own hostname. When [qui](qui.md) is selected, qui
+is the everyday interface and the WebUI remains a fallback.
 
 ## Enable
 
 ```yaml
 # group_vars/nas.yml
 selfhosted_data_path: /srv/data
-caddy_enabled: true   # Required only while qui is not selected
+caddy_enabled: true
 
 qbittorrent_enabled: true
 qbittorrent_confirm_legal_notice: true
-qbittorrent_hostname: torrents.example.com   # Used only while qui is not selected
+qbittorrent_hostname: torrents.example.com
 ```
 
 ```yaml
@@ -31,15 +32,15 @@ qBittorrent's legal notice: "qBittorrent is a file sharing program. When you
 run a torrent, its data will be made available to others by means of upload.
 Any content you share is your sole responsibility."
 
-Without qui, complete the [Caddy HTTPS setup](caddy.md#set-up-private-https)
-for the hostname before deploying. See
+Complete the [Caddy HTTPS setup](caddy.md#set-up-private-https) for the
+hostname before deploying. See
 [Shared data layout](../media-stack.md#shared-data-layout) for
 `selfhosted_data_path` and the shared UID, GID, and umask.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `qbittorrent_webui_username` / `_password` | none | Vaulted WebUI login; the password needs at least 8 characters |
-| `qbittorrent_hostname` | none | HTTPS hostname, used only while qui is not selected |
+| `qbittorrent_hostname` | none | HTTPS hostname of the WebUI |
 | `qbittorrent_address` | `127.10.0.1` | Loopback address of the WebUI and API; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
 | `qbittorrent_webui_port` | `8080` | WebUI and API port |
 | `qbittorrent_torrenting_port` | `6881` | Peer port on every interface (TCP and UDP) |
@@ -96,8 +97,8 @@ own subfolder.
 
 ## Set up
 
-1. Deploy, then sign in with the vaulted credentials: in qui, or at the HTTPS
-   hostname while qui is not selected.
+1. Deploy, then sign in at the HTTPS hostname with the vaulted credentials.
+   With qui, [add qBittorrent as an instance](qui.md#set-up) instead.
 2. Under **Options → Downloads**, check that the default save path is under
    `/data/torrents`, or `torrents/` under your `selfhosted_data_container_path`.
 3. Decide how peers reach the NAS. UPnP / NAT-PMP is on by default under
@@ -140,14 +141,14 @@ its downloads under one mounted directory; the general steps are in
    `1000`.
 
 5. Run `make deploy-qbittorrent`. Torrents keep their state and save paths.
-6. Once qui is deployed, point it and any other client at
+6. Point [qui](qui.md#set-up) and any other client at
    `http://qbittorrent:8080`. Clients that used that Docker name before keep
    working unchanged.
 
 ## Deploy
 
 ```bash
-make deploy-qbittorrent   # Docker and qBittorrent; Caddy first while qui is not selected
+make deploy-qbittorrent   # Docker and qBittorrent; Caddy must be deployed
 make deploy               # The full selected stack
 ```
 
@@ -159,11 +160,9 @@ The container gets up to 30 minutes to stop so it can save resume data.
 
 qBittorrent uses host networking without Docker port publishing:
 
-- The WebUI and API listen only on `127.10.0.1:8080`. While qui is not
-  selected, Caddy publishes them at `qbittorrent_hostname` on its private
-  listeners; see [Caddy network exposure](caddy.md#network-exposure).
-- Once qui is selected on the host, the next qBittorrent deployment removes
-  the qBittorrent site from Caddy.
+- The WebUI and API listen only on `127.10.0.1:8080`. Caddy publishes them
+  at `qbittorrent_hostname` on its private listeners, also while qui is
+  selected; see [Caddy network exposure](caddy.md#network-exposure).
 - The peer port listens on every host interface. It is reachable from the
   internet when the router forwards it, which UPnP / NAT-PMP requests by
   default. Peer traffic does not go through Tailscale or a VPN.

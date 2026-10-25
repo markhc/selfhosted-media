@@ -6,7 +6,7 @@
 
   vars:
     # Each service role is tagged with its name and selected by a boolean <name>_enabled.
-    selfhosted_service_names: [tailscale, caddy, thelounge, audiobookshelf, qbittorrent, znc]
+    selfhosted_service_names: [tailscale, caddy, thelounge, audiobookshelf, qbittorrent, qui, znc]
     selfhosted_service_flags: >-
       {{ query('ansible.builtin.vars', *(selfhosted_service_names | map('regex_replace', '$', '_enabled')),
       default=false) }}
@@ -76,6 +76,11 @@
       when: "'qbittorrent' in selfhosted_selected"
       tags:
         - qbittorrent
+
+    - role: qui
+      when: "'qui' in selfhosted_selected"
+      tags:
+        - qui
 
     - role: znc
       when: "'znc' in selfhosted_selected"

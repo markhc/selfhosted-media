@@ -2,8 +2,8 @@
 
 The download and library-management services share one contract so they can
 reach each other and hand files over without copying:
-[qBittorrent](services/qbittorrent.md) today, with qui, Prowlarr, Sonarr, and
-Radarr following the same rules. Each one remains an independently selectable
+[qBittorrent](services/qbittorrent.md) and [qui](services/qui.md) today, with
+Prowlarr, Sonarr, and Radarr following the same rules. Each one remains an independently selectable
 service with its own role; Sonarr and Radarr also run as
 [several instances](#multiple-instances). This guide covers only what they
 share.
@@ -20,8 +20,8 @@ all of them must be selected on the same host.
 
 | Name | Default address | Port | Published through Caddy |
 | --- | --- | --- | --- |
-| `qbittorrent` ([guide](services/qbittorrent.md)) | `127.10.0.1` | `8080` | Only while qui is not selected |
-| `qui` (planned) | `127.10.0.2` | `7476` | Yes |
+| `qbittorrent` ([guide](services/qbittorrent.md)) | `127.10.0.1` | `8080` | Yes, also as a fallback next to qui |
+| `qui` ([guide](services/qui.md)) | `127.10.0.2` | `7476` | Yes |
 | `prowlarr` (planned) | `127.10.0.3` | `9696` | Yes |
 | `sonarr-<instance>` (planned) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
 | `radarr-<instance>` (planned) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
@@ -120,7 +120,7 @@ guide lists the values to enter.
 
 | From | To | Address |
 | --- | --- | --- |
-| qui | qBittorrent | `http://qbittorrent:8080` with the vaulted WebUI credentials |
+| qui | qBittorrent | `http://qbittorrent:8080` with the vaulted WebUI credentials; see [Set up](services/qui.md#set-up) |
 | Each Sonarr and Radarr instance | qBittorrent, through qui's client proxy | Host `qui`, port `7476`, URL base `/proxy/<client key>`, one key per instance |
 | Prowlarr | Each Sonarr and Radarr instance | `http://sonarr-<instance>:8989` or `http://radarr-<instance>:7878` with that instance's API key |
 

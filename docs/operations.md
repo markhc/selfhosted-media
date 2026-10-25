@@ -40,6 +40,7 @@ named after these prefixes:
 | [The Lounge](services/thelounge.md) | `thelounge` |
 | [Audiobookshelf](services/audiobookshelf.md) | `audiobookshelf` |
 | [qBittorrent](services/qbittorrent.md) | `qbittorrent` |
+| [qui](services/qui.md) | `qui` |
 | [ZNC](services/znc.md) | `znc` |
 | ZNC certificate renewal | `znc_acme` |
 
@@ -83,6 +84,7 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/thelounge/data` | Lounge accounts, history, and uploads |
 | `/opt/selfhosted/audiobookshelf/` | Audiobookshelf database and metadata |
 | `/opt/selfhosted/qbittorrent/config` | qBittorrent configuration and torrent resume data |
+| `/opt/selfhosted/qui/config` | qui configuration, session secret, and database |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 
 Back these up securely; do not commit or delete them on redeployment. The

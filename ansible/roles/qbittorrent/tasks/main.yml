@@ -86,16 +86,4 @@
     caddy_site_name: qbittorrent
     caddy_site_hostname: "{{ qbittorrent_hostname }}"
     caddy_site_upstream: "{{ qbittorrent_webui_address }}:{{ qbittorrent_webui_port }}"
-  when:
-    - qbittorrent_published | bool
-    - not ansible_check_mode
-
-- name: Unpublish the qBittorrent WebUI in favor of qui
-  ansible.builtin.include_role:
-    name: caddy
-    tasks_from: unpublish
-  vars:
-    caddy_site_name: qbittorrent
-  when:
-    - not qbittorrent_published | bool
-    - not ansible_check_mode
+  when: not ansible_check_mode

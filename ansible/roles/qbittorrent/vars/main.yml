@@ -20,9 +20,6 @@ qbittorrent_legacy_webui: "{{ qbittorrent_image_tag is version('5.3', '<') }}"
 qbittorrent_webui_location: "{{ qbittorrent_webui_locations[1 if qbittorrent_legacy_webui | bool else 0] }}"
 qbittorrent_webui_stale_location: "{{ qbittorrent_webui_locations[0 if qbittorrent_legacy_webui | bool else 1] }}"
 
-# qui is the web UI when selected on the same host; otherwise Caddy publishes the WebUI.
-qbittorrent_published: "{{ not (qui_enabled | default(false) | bool) }}"
-
 # WebUI settings enforced on every deployment. Local and subnet authentication bypasses
 # stay off because Caddy and qui reach the WebUI from loopback.
 qbittorrent_webui_settings:

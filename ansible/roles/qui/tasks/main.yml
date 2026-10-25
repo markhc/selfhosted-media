@@ -1,0 +1,82 @@
+---
+- name: Validate the qui configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect the shared data path
+  ansible.builtin.stat:
+    path: "{{ qui_data_path }}"
+  register: qui_data_stat
+
+- name: Require an existing shared data path
+  ansible.builtin.assert:
+    that:
+      - qui_data_stat.stat.exists
+      - qui_data_stat.stat.isdir
+    fail_msg: >-
+      selfhosted_data_path must point to an existing directory;
+      it is never created automatically.
+
+- name: Inspect the additional qui mounts
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ qui_mounts }}"
+  loop_control:
+    label: "{{ item.target }}"
+  register: qui_mount_stats
+
+- name: Require existing additional qui mounts
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      The qui mount at {{ item.item.target }} must point to an existing directory;
+      it is never created automatically.
+  loop: "{{ qui_mount_stats.results }}"
+  loop_control:
+    label: "{{ item.item.target }}"
+
+- name: Create the qui deployment directory
+  ansible.builtin.file:
+    path: "{{ qui_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# Never recursive: migrated configuration keeps the ownership the operator set.
+- name: Create the qui configuration directory
+  ansible.builtin.file:
+    path: "{{ qui_directory }}/config"
+    state: directory
+    owner: "{{ qui_uid }}"
+    group: "{{ qui_gid }}"
+    mode: '0700'
+
+- name: Write the qui Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ qui_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge qui
+  community.docker.docker_compose_v2:
+    project_src: "{{ qui_directory }}"
+    project_name: selfhosted-qui
+    state: present
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+
+- name: Publish qui through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: qui
+    caddy_site_hostname: "{{ qui_hostname }}"
+    caddy_site_upstream: "{{ qui_listen_address }}:{{ qui_port }}"
+  when: not ansible_check_mode

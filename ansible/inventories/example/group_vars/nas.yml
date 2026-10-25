@@ -74,5 +74,14 @@ qbittorrent_mounts: []
 #     target: /watch
 #     read_only: false
 
+# --- qui (docs/services/qui.md); the web UI for qBittorrent ---
+qui_enabled: false
+qui_image_repository: ghcr.io/autobrr/qui
+qui_image_tag: "v1.33.1"
+# qui_address: 127.10.0.2
+# qui_port: 7476
+# qui sees the shared data root and qbittorrent_mounts at the same paths as qBittorrent.
+# qui_mounts: []
+
 # --- ZNC (docs/services/znc.md); runs on a separate bouncer host ---
 znc_enabled: false

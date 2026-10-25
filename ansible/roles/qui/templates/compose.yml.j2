@@ -1,0 +1,57 @@
+# Managed by Ansible. qui listens on its own loopback address only, behind Caddy.
+name: selfhosted-qui
+services:
+  qui:
+    image: {{ qui_image }}
+    network_mode: host
+    restart: unless-stopped
+    user: "{{ qui_uid }}:{{ qui_gid }}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Peers in the media stack, by name.
+    extra_hosts:
+{% for name, address in media_hosts_addresses | dictsort %}
+      - "{{ name }}:{{ address }}"
+{% endfor %}
+    environment:
+      QUI__HOST: "{{ qui_listen_address }}"
+      QUI__PORT: "{{ qui_port }}"
+      QUI__ALLOWED_HOSTS: {{ qui_allowed_hosts | join(',') | to_json }}
+      # Caddy serves qui over HTTPS only.
+      QUI__SESSION_COOKIE_SECURE: "true"
+      # The image tag pins the version; upgrades go through the inventory.
+      QUI__DISABLE_SELF_UPDATE: "true"
+      QUI__LOG_LEVEL: {{ qui_log_level | to_json }}
+      UMASK: {{ qui_umask | to_json }}
+      TZ: {{ qui_timezone | to_json }}
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --max-time
+        - "5"
+        - --output
+        - /dev/null
+        - http://{{ qui_listen_address }}:{{ qui_port }}/health
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    volumes:
+      - ./config:/config
+      - type: bind
+        source: {{ qui_data_path | replace('$', '$$') | to_json }}
+        target: {{ qui_data_container_path | to_json }}
+        bind:
+          create_host_path: false
+{% for mount in qui_mounts %}
+      - type: bind
+        source: {{ mount.path | replace('$', '$$') | to_json }}
+        target: {{ mount.target | to_json }}
+        read_only: {{ mount.read_only | default(true) | bool | to_json }}
+        bind:
+          create_host_path: false
+{% endfor %}
