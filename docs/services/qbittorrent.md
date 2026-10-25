@@ -38,12 +38,34 @@ for the hostname before deploying. See
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `qbittorrent_webui_username` / `_password` | none | Vaulted WebUI login; the password needs at least 12 characters |
+| `qbittorrent_webui_username` / `_password` | none | Vaulted WebUI login; the password needs at least 8 characters |
 | `qbittorrent_hostname` | none | HTTPS hostname, used only while qui is not selected |
 | `qbittorrent_address` | `127.10.0.1` | Loopback address of the WebUI and API; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
 | `qbittorrent_webui_port` | `8080` | WebUI and API port |
 | `qbittorrent_torrenting_port` | `6881` | Peer port on every interface (TCP and UDP) |
+| `qbittorrent_mounts` | `[]` | Additional host directories to mount; see [Additional mounts](#additional-mounts) |
 | `qbittorrent_image_repository` / `_tag` / `_digest` | official image, pinned | See [Container images](../operations.md#container-images) |
+
+### Additional mounts
+
+Everything qBittorrent downloads belongs under the shared data root. To give it
+other existing NAS directories, such as a watch folder or a separate
+cross-seed tree, list them in `qbittorrent_mounts`:
+
+```yaml
+qbittorrent_mounts:
+  - path: /srv/watch          # Existing host directory
+    target: /watch            # Absolute path inside the container
+    read_only: false          # Optional; mounts are read-only by default
+```
+
+Each `path` must already exist as a directory outside `/opt/selfhosted`;
+Ansible never creates or re-owns it, so the shared UID/GID needs access to it.
+Each `target` must be unique and must not be a system directory, `/config`,
+`/tmp`, or at, inside, or above `selfhosted_data_container_path` or another
+target. Hardlinks and instant moves work only within one filesystem, so keep
+directories that the other media services import from under the shared data
+root.
 
 ## Managed settings
 
@@ -60,18 +82,24 @@ changed:
 - `Username` and `Password_PBKDF2` from the vault. Only the PBKDF2 hash reaches
   the NAS. Changing the vaulted password changes the WebUI login.
 
-Older `[Preferences] WebUI\*` copies of these keys are removed. Otherwise
-qBittorrent 5.3 would move them over the enforced values on its first start.
+qBittorrent 5.3 moved these keys from `[Preferences] WebUI\*` to a `[WebUI]`
+section, so Ansible writes them where the version in `qbittorrent_image_tag`
+reads them and removes the copies in the other location. Otherwise an older
+release would ignore the enforced values, and 5.3 would move stale copies over
+them on its first start. The tag must therefore name an official release of
+5.0 or newer, such as `"5.2.4-1"`, even when a digest pins the image.
 Any other setting changed in the WebUI is kept. A new configuration starts
-downloads in `/data/torrents`, with automatic torrent management on, so each
-category gets its own subfolder.
+downloads in `torrents/` under the
+[data container path](../media-stack.md#shared-data-layout) (`/data/torrents`
+by default), with automatic torrent management on, so each category gets its
+own subfolder.
 
 ## Set up
 
 1. Deploy, then sign in with the vaulted credentials: in qui, or at the HTTPS
    hostname while qui is not selected.
 2. Under **Options → Downloads**, check that the default save path is under
-   `/data/torrents`.
+   `/data/torrents`, or `torrents/` under your `selfhosted_data_container_path`.
 3. Decide how peers reach the NAS. UPnP / NAT-PMP is on by default under
    **Options → Connection**, so qBittorrent asks the router to forward
    `qbittorrent_torrenting_port` (TCP and UDP) automatically. Turn it off to
@@ -79,15 +107,17 @@ category gets its own subfolder.
 
 ## Migrate an existing qBittorrent
 
-This assumes the old container also uses the official image and sees its
-downloads under `/data`; the general steps are in
+This assumes the old container also uses the official image and sees all of
+its downloads under one mounted directory; the general steps are in
 [Migrating an existing stack](../media-stack.md#migrating-an-existing-stack).
 
 1. Check the old version, for example with
    `sudo docker exec <old-container> qbittorrent-nox --version`, and set
    `qbittorrent_image_tag` to the same or a newer tag.
-2. Set `selfhosted_data_path` to the host directory the old container mounts
-   at `/data`, and the vaulted credentials. They replace the old WebUI login.
+2. Set `selfhosted_data_path` to the host directory the old container mounts,
+   `selfhosted_data_container_path` to where it mounts it (for example
+   `/downloads`), and the vaulted credentials. They replace the old WebUI
+   login.
 3. Stop the old container with a long timeout so it finishes writing resume
    data, and keep it from restarting:
 
@@ -145,6 +175,7 @@ qBittorrent uses host networking without Docker port publishing:
 | `/opt/selfhosted/qbittorrent/config/qBittorrent/config` | `qBittorrent.conf`, categories, and watched folders |
 | `/opt/selfhosted/qbittorrent/config/qBittorrent/data` | `BT_backup/` torrent and resume files, RSS data, and logs |
 | `selfhosted_data_path` | Downloads; never created, re-owned, or deleted by Ansible |
+| `qbittorrent_mounts` paths | Additional directories; never created, re-owned, or deleted by Ansible |
 
 Back up the configuration directory securely. The container runs as
 `selfhosted_data_uid:selfhosted_data_gid` with a read-only root filesystem.
@@ -166,8 +197,8 @@ Disabling qBittorrent leaves its container and any Caddy site running; see
   access to `selfhosted_data_path`, for example
   `sudo -u '#1000' touch /srv/data/torrents/.write-test`.
 - **Migrated torrents show missing files**: the old container saw the
-  downloads at a different path than the new `/data` mount. Set
-  `selfhosted_data_path` to the host directory the old container mounted at
-  `/data`.
+  downloads at a different host or container path than the new mount. Set
+  `selfhosted_data_path` and `selfhosted_data_container_path` to the host
+  directory the old container mounted and the path where it mounted it.
 - **Login fails after deployment**: the vaulted credentials replaced the old
   ones. Too many failures ban the client address for a while; see the logs.

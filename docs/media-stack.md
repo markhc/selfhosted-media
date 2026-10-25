@@ -82,9 +82,10 @@ The roles will follow these rules:
 ## Shared data layout
 
 Services that handle media files mount one existing host directory at the same
-container path, `/data`. A path reported by qBittorrent, such as
+container path, `/data` by default. A path reported by qBittorrent, such as
 `/data/torrents/tv/Example.Show.S01`, is then valid in every other service, and
-imports are hardlinks or instant moves instead of copies.
+imports are hardlinks or instant moves instead of copies. The examples in these
+guides use the default `/data`.
 
 ```text
 /data
@@ -96,7 +97,8 @@ Set the shared variables in `group_vars/nas.yml`:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `selfhosted_data_path` | none | Existing host directory mounted at `/data` |
+| `selfhosted_data_path` | none | Existing host directory mounted in every media container |
+| `selfhosted_data_container_path` | `/data` | Path of that directory inside the containers |
 | `selfhosted_data_uid` / `_gid` | `1000` | Container user and group of every service that writes to it |
 | `selfhosted_data_umask` | `"002"` | Quoted umask; group-writable so the services can modify each other's files |
 
@@ -106,6 +108,10 @@ Set the shared variables in `group_vars/nas.yml`:
   it. Create the subdirectories yourself, owned by the shared UID/GID.
 - The path must be outside the `/opt/selfhosted` deployment root, so no
   container can read another service's credentials.
+- Choose the container path once. The services store absolute paths, such as
+  qBittorrent save paths and Sonarr root folders, so changing it later breaks
+  them. It must be absolute and outside system directories, `/config`, and
+  `/tmp`.
 
 ## Service connections
 
@@ -128,8 +134,9 @@ qui, Prowlarr, Sonarr, Radarr. For each service:
 1. Check the running version. The pinned image in this repository must be the
    same or newer, because database and configuration migrations only run
    forward.
-2. Point `selfhosted_data_path` at the host directory the old containers mount
-   at `/data`, so stored paths remain valid.
+2. Point `selfhosted_data_path` at the host directory the old containers
+   mount, and set `selfhosted_data_container_path` to the path where they
+   mount it, for example `/downloads`, so stored paths remain valid.
 3. Stop the old container and keep it from restarting. Its ports would
    otherwise collide with the new deployment on the same NAS.
 4. Copy its configuration into `/opt/selfhosted/<service>/` (for an instance,

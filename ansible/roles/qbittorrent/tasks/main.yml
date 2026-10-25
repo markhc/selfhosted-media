@@ -16,6 +16,26 @@
       selfhosted_data_path must point to an existing directory;
       it is never created automatically.
 
+- name: Inspect the additional qBittorrent mounts
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ qbittorrent_mounts }}"
+  loop_control:
+    label: "{{ item.target }}"
+  register: qbittorrent_mount_stats
+
+- name: Require existing additional qBittorrent mounts
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      The qBittorrent mount at {{ item.item.target }} must point to an existing directory;
+      it is never created automatically.
+  loop: "{{ qbittorrent_mount_stats.results }}"
+  loop_control:
+    label: "{{ item.item.target }}"
+
 - name: Create the qBittorrent deployment directory
   ansible.builtin.file:
     path: "{{ qbittorrent_directory }}"

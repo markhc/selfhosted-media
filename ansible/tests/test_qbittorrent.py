@@ -24,7 +24,8 @@ SETTINGS = {
     "qbittorrent_webui_username": "exampleuser",
     "qbittorrent_webui_password": PASSWORD,
 }
-LEGACY_CONF = """[BitTorrent]
+# qBittorrent before 5.3 reads its WebUI settings from [Preferences] WebUI\\* keys.
+PREFERENCES_CONF = """[BitTorrent]
 Session\\DefaultSavePath=/data/torrents
 
 [Preferences]
@@ -35,6 +36,20 @@ WebUI\\Username=admin
 WebUI\\Password_PBKDF2="@ByteArray(c2FsdA==:a2V5)"
 Downloads\\SavePath=/data/torrents
 """
+# qBittorrent 5.3 and later read them from a [WebUI] section.
+WEBUI_CONF = """[BitTorrent]
+Session\\DefaultSavePath=/data/torrents
+
+[Preferences]
+Downloads\\SavePath=/data/torrents
+
+[WebUI]
+Address=*
+Port=8080
+LocalHostAuth=false
+Username=admin
+Password_PBKDF2="@ByteArray(c2FsdA==:a2V5)"
+"""
 
 
 def webui_section(text):
@@ -42,6 +57,14 @@ def webui_section(text):
     parser.optionxform = str
     parser.read_string(text)
     return parser
+
+
+def webui_settings(text, section="Preferences", prefix="WebUI\\"):
+    """Return the WebUI settings stored in SECTION under PREFIX, without the prefix."""
+    parser = webui_section(text)
+    if not parser.has_section(section):
+        return {}
+    return {key[len(prefix):]: value for key, value in parser[section].items() if key.startswith(prefix)}
 
 
 def verify_pbkdf2(value, password):
@@ -78,7 +101,7 @@ class QbittorrentTests(unittest.TestCase):
     def test_webui_on_loopback_and_unprivileged(self):
         self.assertEqual(self.compose["name"], "selfhosted-qbittorrent")
         service = self.compose["services"]["qbittorrent"]
-        self.assertEqual(service["image"], "qbittorrentofficial/qbittorrent-nox:5.3.0-2")
+        self.assertEqual(service["image"], "qbittorrentofficial/qbittorrent-nox:5.2.4-1")
         self.assertEqual(service["network_mode"], "host")
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
@@ -100,7 +123,7 @@ class QbittorrentTests(unittest.TestCase):
             service = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["qbittorrent"]
             self.assertEqual(service["extra_hosts"], [
                 "qbittorrent:127.10.9.9", "sonarr-anime:127.10.1.2", "sonarr-tv:127.10.1.1"])
-            self.assertEqual(webui_section((Path(temp) / "qBittorrent.conf").read_text())["WebUI"]["Address"],
+            self.assertEqual(webui_settings((Path(temp) / "qBittorrent.conf").read_text())["Address"],
                              "127.10.9.9")
 
     def test_shared_data_root_is_an_existing_bind_mount(self):
@@ -109,11 +132,36 @@ class QbittorrentTests(unittest.TestCase):
             "type": "bind", "source": "/srv/example data/$$data", "target": "/data",
             "bind": {"create_host_path": False}}])
 
+    def test_data_container_path_can_match_an_existing_stack(self):
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
+            variables = {**SETTINGS, "selfhosted_data_container_path": "/downloads"}
+            result = run_role("qbittorrent", temp, variables, ("compose.yml", "qBittorrent.conf"))
+            self.assertEqual(result.returncode, 0, result.stdout)
+            service = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["qbittorrent"]
+            self.assertEqual(service["volumes"][1]["target"], "/downloads")
+            conf = webui_section((Path(temp) / "qBittorrent.conf").read_text())
+            self.assertEqual(conf["BitTorrent"]["Session\\DefaultSavePath"], "/downloads/torrents")
+
+    def test_additional_mounts_are_existing_binds_read_only_by_default(self):
+        mounts = [{"path": "/srv/example/cross $seed", "target": "/cross-seed"},
+                  {"path": "/srv/example/watch", "target": "/watch", "read_only": False}]
+        with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
+            result = run_role("qbittorrent", temp, {**SETTINGS, "qbittorrent_mounts": mounts}, ("compose.yml",))
+            self.assertEqual(result.returncode, 0, result.stdout)
+            volumes = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["qbittorrent"]["volumes"]
+        self.assertEqual(volumes[2:], [
+            {"type": "bind", "source": "/srv/example/cross $$seed", "target": "/cross-seed", "read_only": True,
+             "bind": {"create_host_path": False}},
+            {"type": "bind", "source": "/srv/example/watch", "target": "/watch", "read_only": False,
+             "bind": {"create_host_path": False}}])
+
     def test_seed_configuration_binds_loopback_with_hashed_credentials(self):
-        conf = webui_section((self.directory / "qBittorrent.conf").read_text())
+        text = (self.directory / "qBittorrent.conf").read_text()
+        conf = webui_section(text)
         self.assertEqual(conf["BitTorrent"]["Session\\DefaultSavePath"], "/data/torrents")
         self.assertEqual(conf["BitTorrent"]["Session\\DisableAutoTMMByDefault"], "false")
-        webui = conf["WebUI"]
+        self.assertFalse(conf.has_section("WebUI"))
+        webui = webui_settings(text)
         self.assertEqual(webui["Address"], "127.10.0.1")
         self.assertEqual(webui["Port"], "8080")
         self.assertEqual(webui["LocalHostAuth"], "true")
@@ -129,28 +177,49 @@ class QbittorrentTests(unittest.TestCase):
                 variables = {**SETTINGS, "qbittorrent_webui_username": user}
                 result = run_role("qbittorrent", temp, variables, ("qBittorrent.conf",), host=host)
                 self.assertEqual(result.returncode, 0, result.stdout)
-                return webui_section((Path(temp) / "qBittorrent.conf").read_text())["WebUI"]["Password_PBKDF2"]
+                return webui_settings((Path(temp) / "qBittorrent.conf").read_text())["Password_PBKDF2"]
         first = hashed("nas_server", "exampleuser")
         self.assertEqual(first, hashed("nas_server", "exampleuser"))
         self.assertNotEqual(first, hashed("other_nas", "exampleuser"))
 
-    def test_migrated_configuration_is_converged_and_idempotent(self):
+    def test_migrated_configuration_is_converged_where_the_release_reads_it(self):
+        # (pinned tag, existing configuration, section and prefix it reads, stale location)
+        cases = [
+            ("5.2.4-1", PREFERENCES_CONF, ("Preferences", "WebUI\\"), ("WebUI", "")),
+            ("5.2.4-1", WEBUI_CONF, ("Preferences", "WebUI\\"), ("WebUI", "")),
+            ("5.3.0-2", PREFERENCES_CONF, ("WebUI", ""), ("Preferences", "WebUI\\")),
+            ("5.3.0-2", WEBUI_CONF, ("WebUI", ""), ("Preferences", "WebUI\\")),
+        ]
+        for tag, existing, current, stale in cases:
+            with self.subTest(tag=tag, existing=existing), tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
+                conf_path = Path(temp) / "config/qBittorrent/config/qBittorrent.conf"
+                conf_path.parent.mkdir(parents=True)
+                conf_path.write_text(existing)
+                first = self.converge_conf(temp, {"qbittorrent_image_tag": tag})
+                self.assertEqual(first.returncode, 0, first.stdout)
+                text = conf_path.read_text()
+                webui = webui_settings(text, *current)
+                self.assertEqual(webui["Address"], "127.10.0.1")
+                self.assertEqual(webui["LocalHostAuth"], "true")
+                self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
+                self.assertEqual(webui_settings(text, *stale), {})
+                conf = webui_section(text)
+                self.assertEqual(conf["Preferences"]["Downloads\\SavePath"], "/data/torrents")
+                self.assertEqual(conf["BitTorrent"]["Session\\DefaultSavePath"], "/data/torrents")
+                second = self.converge_conf(temp, {"qbittorrent_image_tag": tag})
+                self.assertEqual(second.returncode, 0, second.stdout)
+                self.assertRegex(second.stdout, r"changed=0\b")
+
+    def test_newer_release_is_seeded_with_a_webui_section(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            conf_path = Path(temp) / "config/qBittorrent/config/qBittorrent.conf"
-            conf_path.parent.mkdir(parents=True)
-            conf_path.write_text(LEGACY_CONF)
-            first = self.converge_conf(temp)
-            self.assertEqual(first.returncode, 0, first.stdout)
-            conf = webui_section(conf_path.read_text())
-            self.assertEqual(conf["WebUI"]["Address"], "127.10.0.1")
-            self.assertEqual(conf["WebUI"]["LocalHostAuth"], "true")
-            self.assertTrue(verify_pbkdf2(conf["WebUI"]["Password_PBKDF2"], PASSWORD))
-            self.assertEqual([key for key in conf["Preferences"] if key.startswith("WebUI\\")], [])
-            self.assertEqual(conf["Preferences"]["Downloads\\SavePath"], "/data/torrents")
-            self.assertEqual(conf["BitTorrent"]["Session\\DefaultSavePath"], "/data/torrents")
-            second = self.converge_conf(temp)
-            self.assertEqual(second.returncode, 0, second.stdout)
-            self.assertRegex(second.stdout, r"changed=0\b")
+            variables = {**SETTINGS, "qbittorrent_image_tag": "5.3.0-2"}
+            result = run_role("qbittorrent", temp, variables, ("qBittorrent.conf",))
+            self.assertEqual(result.returncode, 0, result.stdout)
+            text = (Path(temp) / "qBittorrent.conf").read_text()
+            self.assertEqual(webui_settings(text), {})
+            webui = webui_settings(text, "WebUI", "")
+            self.assertEqual(webui["Address"], "127.10.0.1")
+            self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
 
     def test_new_configuration_is_seeded_once(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
@@ -164,10 +233,10 @@ class QbittorrentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
             conf_path = Path(temp) / "config/qBittorrent/config/qBittorrent.conf"
             conf_path.parent.mkdir(parents=True)
-            conf_path.write_text(LEGACY_CONF)
+            conf_path.write_text(WEBUI_CONF)
             result = self.converge_conf(temp)
             self.assertEqual(result.returncode, 0, result.stdout)
-            password_hash = webui_section(conf_path.read_text())["WebUI"]["Password_PBKDF2"].strip('"')
+            password_hash = webui_settings(conf_path.read_text())["Password_PBKDF2"].strip('"')
             for secret in (PASSWORD, password_hash):
                 self.assertNotIn(secret, result.stdout)
         self.assertNotIn(PASSWORD, self.result.stdout)
@@ -206,10 +275,28 @@ class QbittorrentTests(unittest.TestCase):
             {"qbittorrent_webui_username": "user=admin"},
             {"qbittorrent_webui_password": "short"},
             {"qbittorrent_webui_password": "fake-password\nWebUI\\Address=*"},
+            {"qbittorrent_image_tag": "4.6.7-1"},
+            {"qbittorrent_image_tag": "5.2"},
+            {"qbittorrent_image_tag": "release-5.2.4"},
         ]
         for path in ("", "relative/path", "/srv/example/", "/srv/../etc", "/", "/opt", "/opt/selfhosted",
                      "/opt/selfhosted/caddy", "/srv/bad\npath"):
             cases.append({"selfhosted_data_path": path})
+        for path in ("", "data", "/data/", "/", "/data/../etc", "/my data", "/config", "/config/data", "/tmp",
+                     "/usr/local/data", "/proc"):
+            cases.append({"selfhosted_data_container_path": path})
+        mount = {"path": "/srv/example/watch", "target": "/watch"}
+        for mounts in ("/srv/example/watch", {"watch": mount}, ["/srv/example/watch"],
+                       [{"target": "/watch"}], [{"path": "/srv/example/watch"}],
+                       [{**mount, "read_only": "no"}], [mount, {**mount, "path": "/srv/example/other"}],
+                       [mount, {"path": "/srv/example/other", "target": "/watch/inner"}],
+                       [{"path": "/srv/example/other", "target": "/watch/inner"}, mount]):
+            cases.append({"qbittorrent_mounts": mounts})
+        for path in ("relative/path", "/srv/example/", "/srv/../etc", "/", "/opt/selfhosted",
+                     "/opt/selfhosted/caddy"):
+            cases.append({"qbittorrent_mounts": [{**mount, "path": path}]})
+        for target in ("watch", "/watch/", "/", "/config", "/tmp/watch", "/etc", "/data", "/data/watch", "/my watch"):
+            cases.append({"qbittorrent_mounts": [{**mount, "target": target}]})
         for extra in cases:
             with self.subTest(extra=extra):
                 result = run_role("qbittorrent", self.directory, {**SETTINGS, **extra})

@@ -1,7 +1,7 @@
 ---
 qbittorrent_directory: /opt/selfhosted/qbittorrent
 qbittorrent_image_repository: qbittorrentofficial/qbittorrent-nox
-qbittorrent_image_tag: "5.3.0-2"
+qbittorrent_image_tag: "5.2.4-1"
 # Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
 qbittorrent_image_digest: ""
 qbittorrent_webui_port: 8080
@@ -9,10 +9,15 @@ qbittorrent_webui_port: 8080
 qbittorrent_torrenting_port: 6881
 # Container TZ; defaults to the shared selfhosted_timezone, else UTC.
 qbittorrent_timezone: "{{ selfhosted_timezone | default('UTC') }}"
-# The shared media data root, mounted at /data in every service that handles media files.
+# The shared media data root, mounted at the same container path in every service that
+# handles media files.
 qbittorrent_data_path: "{{ selfhosted_data_path | default('') }}"
+qbittorrent_data_container_path: "{{ selfhosted_data_container_path | default('/data') }}"
 qbittorrent_uid: "{{ selfhosted_data_uid | default(1000) }}"
 qbittorrent_gid: "{{ selfhosted_data_gid | default(1000) }}"
 qbittorrent_umask: "{{ selfhosted_data_umask | default('002') }}"
+# Each entry bind-mounts an existing host directory (path) at an absolute container path
+# (target), read-only unless read_only is false.
+qbittorrent_mounts: []
 # Set to true only after reading qBittorrent's legal notice.
 qbittorrent_confirm_legal_notice: false

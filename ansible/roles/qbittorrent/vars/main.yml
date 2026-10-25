@@ -9,6 +9,17 @@ qbittorrent_webui_address: "{{ media_hosts_addresses.qbittorrent }}"
 
 qbittorrent_conf_path: "{{ qbittorrent_directory }}/config/qBittorrent/config/qBittorrent.conf"
 
+# qBittorrent 5.3 moved the WebUI settings from [Preferences] WebUI\* keys to a [WebUI]
+# section. Settings are enforced where the pinned version reads them and removed from the other.
+qbittorrent_webui_locations:
+  - section: WebUI
+    prefix: ""
+  - section: Preferences
+    prefix: WebUI\
+qbittorrent_legacy_webui: "{{ qbittorrent_image_tag is version('5.3', '<') }}"
+qbittorrent_webui_location: "{{ qbittorrent_webui_locations[1 if qbittorrent_legacy_webui | bool else 0] }}"
+qbittorrent_webui_stale_location: "{{ qbittorrent_webui_locations[0 if qbittorrent_legacy_webui | bool else 1] }}"
+
 # qui is the web UI when selected on the same host; otherwise Caddy publishes the WebUI.
 qbittorrent_published: "{{ not (qui_enabled | default(false) | bool) }}"
 

@@ -41,6 +41,14 @@ services:
       - ./config:/config
       - type: bind
         source: {{ qbittorrent_data_path | replace('$', '$$') | to_json }}
-        target: /data
+        target: {{ qbittorrent_data_container_path | to_json }}
         bind:
           create_host_path: false
+{% for mount in qbittorrent_mounts %}
+      - type: bind
+        source: {{ mount.path | replace('$', '$$') | to_json }}
+        target: {{ mount.target | to_json }}
+        read_only: {{ mount.read_only | default(true) | bool | to_json }}
+        bind:
+          create_host_path: false
+{% endfor %}

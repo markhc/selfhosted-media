@@ -9,9 +9,11 @@
 
 # Shared media data root for qBittorrent and the services that import its downloads.
 # It must already exist on one filesystem, holding for example torrents/ and media/;
-# every such service sees it at /data. See docs/media-stack.md.
+# every such service sees it at selfhosted_data_container_path. See docs/media-stack.md.
 selfhosted_data_path: ""
 # selfhosted_data_path: /srv/data
+# Path inside the containers; when migrating, use the one your old containers mount.
+# selfhosted_data_container_path: /data
 # Owner of the data tree; these services run as this UID/GID with a group-writable umask.
 # selfhosted_data_uid: 1000
 # selfhosted_data_gid: 1000
@@ -57,11 +59,20 @@ audiobookshelf_libraries: []
 # --- qBittorrent (docs/services/qbittorrent.md) ---
 qbittorrent_enabled: false
 qbittorrent_image_repository: qbittorrentofficial/qbittorrent-nox
-qbittorrent_image_tag: "5.2.4-2"
+qbittorrent_image_tag: "5.2.4-1"
 # Set to true after reading qBittorrent's legal notice in docs/services/qbittorrent.md.
 qbittorrent_confirm_legal_notice: false
 # Each media service listens on its own loopback address; see docs/media-stack.md.
 # qbittorrent_address: 127.10.0.1
+# qbittorrent_webui_port: 8080
+# It is recommended you change the torrenting port from the default 6881 to avoid ISP throttling.
+# qbittorrent_torrenting_port: 6881
+# Additional existing NAS directories, mounted read-only unless read_only is false.
+qbittorrent_mounts: []
+# qbittorrent_mounts:
+#   - path: /srv/watch
+#     target: /watch
+#     read_only: false
 
 # --- ZNC (docs/services/znc.md); runs on a separate bouncer host ---
 znc_enabled: false

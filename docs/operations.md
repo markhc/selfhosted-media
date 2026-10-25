@@ -55,7 +55,7 @@ named after these prefixes:
 
 ```yaml
 # Placeholder digest; use the one printed for your image.
-qbittorrent_image_tag: "5.3.0-2"
+qbittorrent_image_tag: "5.2.4-1"
 qbittorrent_image_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 ```
 

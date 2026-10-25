@@ -12,7 +12,7 @@ tailscale_oauth_client_secret: ""
 caddy_cloudflare_api_token: ""
 
 # Required whenever qBittorrent is enabled. Ansible writes only a PBKDF2 hash to
-# the NAS; at least 12 characters.
+# the NAS; at least 8 characters.
 qbittorrent_webui_username: ""
 qbittorrent_webui_password: ""
 

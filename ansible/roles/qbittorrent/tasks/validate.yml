@@ -26,7 +26,7 @@
       an absolute deployment path, two different unprivileged ports, a non-root UID/GID,
       a quoted octal umask such as "002", and an IANA timezone name.
 
-- name: Validate the shared data path for qBittorrent
+- name: Validate the shared data paths for qBittorrent
   ansible.builtin.assert:
     that:
       - qbittorrent_data_path is string
@@ -36,9 +36,58 @@
       # Never expose another service's deployment data, such as Caddy's token.
       - not ((qbittorrent_directory | dirname) ~ '/').startswith(qbittorrent_data_path ~ '/')
       - not qbittorrent_data_path.startswith((qbittorrent_directory | dirname) ~ '/')
+      - qbittorrent_data_container_path is string
+      - qbittorrent_data_container_path is match('^(?:/[A-Za-z0-9._-]+)+$')
+      - (qbittorrent_data_container_path ~ '/') is not search('/\.\.?/')
+      # Never shadow the image's system directories, its /config volume, or its /tmp tmpfs.
+      - qbittorrent_data_container_path is not
+        match('^/(?:bin|boot|config|dev|etc|lib|lib32|lib64|libx32|proc|run|sbin|sys|tmp|usr)(?:/|$)')
     fail_msg: >-
       Set selfhosted_data_path to the existing media data root, an absolute host path
-      outside {{ qbittorrent_directory | dirname }}.
+      outside {{ qbittorrent_directory | dirname }}, and selfhosted_data_container_path
+      to an absolute container path such as /data, outside system directories, /config, and /tmp.
+
+- name: Validate the qBittorrent mount list
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_mounts is sequence
+      - qbittorrent_mounts is not string
+      - qbittorrent_mounts is not mapping
+    fail_msg: Set qbittorrent_mounts to a list of mounts.
+
+- name: Validate each qBittorrent mount
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.path is defined and item.path is string
+      # Absolute, without a trailing slash, empty, '.', or '..' components.
+      - item.path is match('^(?:/[^/\x00-\x1f\x7f]+)+$')
+      - (item.path ~ '/') is not search('/\.\.?/')
+      # Never expose another service's deployment data, such as Caddy's token.
+      - not ((qbittorrent_directory | dirname) ~ '/').startswith(item.path ~ '/')
+      - not item.path.startswith((qbittorrent_directory | dirname) ~ '/')
+      - item.target is defined and item.target is string
+      - item.target is match('^(?:/[A-Za-z0-9._-]+)+$')
+      - (item.target ~ '/') is not search('/\.\.?/')
+      - item.target is not
+        match('^/(?:bin|boot|config|dev|etc|lib|lib32|lib64|libx32|proc|run|sbin|sys|tmp|usr)(?:/|$)')
+      # Neither the shared data root nor another mount may sit at or below this target,
+      # and this target may not sit below the shared data root.
+      - qbittorrent_mount_targets | select('match', (item.target | regex_escape) ~ '(?:/|$)') | list | length == 1
+      - not (item.target ~ '/').startswith(qbittorrent_data_container_path ~ '/')
+      - item.read_only | default(true) is boolean
+    fail_msg: >-
+      Each qBittorrent mount needs an absolute host path outside
+      {{ qbittorrent_directory | dirname }}, an absolute container target outside system
+      directories, /config, /tmp, the shared data path, and the other mounts, and an
+      optional boolean read_only.
+  loop: "{{ qbittorrent_mounts }}"
+  loop_control:
+    label: "{{ item.target | default('unnamed') if item is mapping else 'invalid' }}"
+  vars:
+    qbittorrent_mount_targets: >-
+      {{ [qbittorrent_data_container_path]
+      + (qbittorrent_mounts | select('mapping') | map(attribute='target', default='') | select('string') | list) }}
 
 - name: Validate the qBittorrent WebUI credentials
   ansible.builtin.assert:
@@ -48,11 +97,11 @@
       - qbittorrent_webui_username is match('^[A-Za-z0-9._-]{1,64}$')
       - qbittorrent_webui_password is defined
       - qbittorrent_webui_password is string
-      - qbittorrent_webui_password | length >= 12
+      - qbittorrent_webui_password | length >= 8
       - qbittorrent_webui_password is not search('[\x00-\x1f\x7f]')
     fail_msg: >-
       Set qbittorrent_webui_username (letters, digits, '.', '_', or '-') and a
-      qbittorrent_webui_password of at least 12 characters in the encrypted vault.
+      qbittorrent_webui_password of at least 8 characters in the encrypted vault.
 
 - name: Validate the qBittorrent WebUI publication
   ansible.builtin.assert:
@@ -70,3 +119,13 @@
     that:
       - qbittorrent_image is string
     quiet: true
+
+# The tag decides where the WebUI settings are enforced, so it must name a release.
+- name: Validate the qBittorrent release
+  ansible.builtin.assert:
+    that:
+      - qbittorrent_image_tag is match('^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9]+)?$')
+      - qbittorrent_image_tag is version('5.0', '>=')
+    fail_msg: >-
+      Set qbittorrent_image_tag to an official qbittorrent-nox release tag of 5.0 or
+      newer, such as "5.2.4-1".
