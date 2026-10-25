@@ -1,0 +1,25 @@
+---
+- name: Validate the Sonarr configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect the shared data path
+  ansible.builtin.stat:
+    path: "{{ sonarr_data_path }}"
+  register: sonarr_data_stat
+
+- name: Require an existing shared data path
+  ansible.builtin.assert:
+    that:
+      - sonarr_data_stat.stat.exists
+      - sonarr_data_stat.stat.isdir
+    fail_msg: >-
+      selfhosted_data_path must point to an existing directory;
+      it is never created automatically.
+
+# Instances removed from sonarr_instances are no longer managed and keep running.
+- name: Deploy each Sonarr instance
+  ansible.builtin.include_tasks: instance.yml
+  loop: "{{ sonarr_instances }}"
+  loop_control:
+    loop_var: sonarr_instance
+    label: "{{ sonarr_instance.name }}"

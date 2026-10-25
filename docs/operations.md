@@ -11,7 +11,10 @@ service but leaves any existing deployment, data, and timers in place; stop
 them explicitly with Compose on the host if they were already deployed.
 
 - Every service is a separate Compose project named `selfhosted-<service>` in
-  `/opt/selfhosted/<service>`, so disabling one never touches another.
+  `/opt/selfhosted/<service>`, so disabling one never touches another. Each
+  Sonarr and Radarr instance is its own project, such as `selfhosted-sonarr-tv`
+  with the Caddy site `sonarr-tv.caddy`, and removing it from the instance
+  list leaves it running in the same way.
 - Disabling a web service leaves its container and its Caddy site running. To
   remove it, stop its project, delete
   `/opt/selfhosted/caddy/conf/sites/<service>.caddy`, and run
@@ -41,6 +44,8 @@ named after these prefixes:
 | [Audiobookshelf](services/audiobookshelf.md) | `audiobookshelf` |
 | [qBittorrent](services/qbittorrent.md) | `qbittorrent` |
 | [qui](services/qui.md) | `qui` |
+| [Sonarr](services/sonarr.md) | `sonarr` |
+| [Radarr](services/radarr.md) | `radarr` |
 | [ZNC](services/znc.md) | `znc` |
 | ZNC certificate renewal | `znc_acme` |
 
@@ -85,6 +90,8 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/audiobookshelf/` | Audiobookshelf database and metadata |
 | `/opt/selfhosted/qbittorrent/config` | qBittorrent configuration and torrent resume data |
 | `/opt/selfhosted/qui/config` | qui configuration, session secret, and database |
+| `/opt/selfhosted/sonarr-<instance>/config` | Sonarr configuration, database, and backups, per instance |
+| `/opt/selfhosted/radarr-<instance>/config` | Radarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 
 Back these up securely; do not commit or delete them on redeployment. The

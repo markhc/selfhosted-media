@@ -1,0 +1,16 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+radarr_image: >-
+  {{ radarr_image_repository
+  | container_image(radarr_image_tag, radarr_image_digest) }}
+
+# Per-instance values; tasks/instance.yml sets radarr_instance for each entry of radarr_instances.
+radarr_instance_name: radarr-{{ radarr_instance.name }}
+radarr_instance_directory: "{{ radarr_deployment_root }}/{{ radarr_instance_name }}"
+
+# Host headers Radarr accepts besides its built-in localhost names: Caddy passes the
+# public hostname, and media services connect by name or address.
+radarr_allowed_hosts:
+  - "{{ radarr_instance.hostname }}"
+  - "{{ radarr_instance_name }}"
+  - "{{ radarr_instance.address }}"

@@ -1,0 +1,76 @@
+---
+# Also validates each instance's name and unique loopback address.
+- name: Resolve the media service addresses
+  ansible.builtin.include_role:
+    name: media_hosts
+
+- name: Validate the Sonarr configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - caddy_enabled | default(false) | bool
+      - sonarr_deployment_root is match('^/[a-zA-Z0-9/_-]+$')
+      - sonarr_port | int > 1024
+      - sonarr_port | int < 65536
+      - sonarr_log_level in ['info', 'debug', 'trace']
+      - sonarr_uid | int > 0
+      - sonarr_gid | int > 0
+      - sonarr_umask is string
+      - sonarr_umask is match('^0?[0-7]{3}$')
+      - sonarr_timezone is string
+      - sonarr_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: >-
+      Sonarr requires Debian/Ubuntu, Caddy, an absolute deployment root, an unprivileged
+      port, a lowercase log level such as info, a non-root UID/GID, a quoted octal umask
+      such as "002", and an IANA timezone name.
+
+- name: Validate the shared data paths for Sonarr
+  ansible.builtin.assert:
+    that:
+      - sonarr_data_path is string
+      # Absolute, without a trailing slash, empty, '.', or '..' components.
+      - sonarr_data_path is match('^(?:/[^/\x00-\x1f\x7f]+)+$')
+      - (sonarr_data_path ~ '/') is not search('/\.\.?/')
+      # Never expose another service's deployment data, such as Caddy's token.
+      - not (sonarr_deployment_root ~ '/').startswith(sonarr_data_path ~ '/')
+      - not sonarr_data_path.startswith(sonarr_deployment_root ~ '/')
+      - sonarr_data_container_path is string
+      - sonarr_data_container_path is match('^(?:/[A-Za-z0-9._-]+)+$')
+      - (sonarr_data_container_path ~ '/') is not search('/\.\.?/')
+      # Never shadow the image's system directories, its /config volume, or its /tmp.
+      - sonarr_data_container_path is not
+        match('^/(?:app|bin|boot|config|dev|etc|lib|lib32|lib64|libx32|proc|run|sbin|sys|tmp|usr)(?:/|$)')
+    fail_msg: >-
+      Set selfhosted_data_path to the existing media data root, an absolute host path
+      outside {{ sonarr_deployment_root }}, and selfhosted_data_container_path
+      to an absolute container path such as /data, outside system directories, /config, and /tmp.
+
+- name: Validate the Sonarr instances
+  ansible.builtin.assert:
+    that:
+      - sonarr_instances | length > 0
+      - sonarr_instances | map(attribute='hostname', default='')
+        | select('match', '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$') | unique | list | length
+        == sonarr_instances | length
+    fail_msg: >-
+      Set sonarr_instances to at least one instance, each with a unique hostname in a
+      DNS zone you control.
+
+- name: Validate the Sonarr API keys
+  ansible.builtin.assert:
+    that:
+      - sonarr_api_keys is defined
+      - sonarr_api_keys is mapping
+      - sonarr_api_keys | dict2items | selectattr('key', 'in', sonarr_instances | map(attribute='name'))
+        | map(attribute='value') | select('string') | select('match', '^[a-f0-9]{32}$') | unique | list | length
+        == sonarr_instances | length
+    fail_msg: >-
+      Set sonarr_api_keys in the encrypted vault to a different 32-character lowercase
+      hexadecimal key for each instance, keyed by instance name.
+  no_log: true
+
+- name: Validate the Sonarr container image
+  ansible.builtin.assert:
+    that:
+      - sonarr_image is string
+    quiet: true

@@ -16,6 +16,18 @@ caddy_cloudflare_api_token: ""
 qbittorrent_webui_username: ""
 qbittorrent_webui_password: ""
 
+# Required whenever Sonarr or Radarr is enabled: one API key per instance, keyed by
+# instance name. Each key is 32 lowercase hex characters; `openssl rand -hex 16`
+# A migrated instance keeps the ApiKey from its old config.xml.
+sonarr_api_keys: {}
+# sonarr_api_keys:
+#   tv: "REPLACE_WITH_32_LOWERCASE_HEX_CHARACTERS"
+#   anime: "REPLACE_WITH_32_LOWERCASE_HEX_CHARACTERS"
+radarr_api_keys: {}
+# radarr_api_keys:
+#   hd: "REPLACE_WITH_32_LOWERCASE_HEX_CHARACTERS"
+#   uhd: "REPLACE_WITH_32_LOWERCASE_HEX_CHARACTERS"
+
 # Optional ZNC: keyed by inventory alias so different hosts get different config.
 # Copy this structure inside the encrypted vault; do not put real values here.
 # Generate password_hash with `znc --makepass` (Argon2id); copy only its Hash value.

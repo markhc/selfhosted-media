@@ -1,0 +1,76 @@
+---
+# Also validates each instance's name and unique loopback address.
+- name: Resolve the media service addresses
+  ansible.builtin.include_role:
+    name: media_hosts
+
+- name: Validate the Radarr configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - caddy_enabled | default(false) | bool
+      - radarr_deployment_root is match('^/[a-zA-Z0-9/_-]+$')
+      - radarr_port | int > 1024
+      - radarr_port | int < 65536
+      - radarr_log_level in ['info', 'debug', 'trace']
+      - radarr_uid | int > 0
+      - radarr_gid | int > 0
+      - radarr_umask is string
+      - radarr_umask is match('^0?[0-7]{3}$')
+      - radarr_timezone is string
+      - radarr_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: >-
+      Radarr requires Debian/Ubuntu, Caddy, an absolute deployment root, an unprivileged
+      port, a lowercase log level such as info, a non-root UID/GID, a quoted octal umask
+      such as "002", and an IANA timezone name.
+
+- name: Validate the shared data paths for Radarr
+  ansible.builtin.assert:
+    that:
+      - radarr_data_path is string
+      # Absolute, without a trailing slash, empty, '.', or '..' components.
+      - radarr_data_path is match('^(?:/[^/\x00-\x1f\x7f]+)+$')
+      - (radarr_data_path ~ '/') is not search('/\.\.?/')
+      # Never expose another service's deployment data, such as Caddy's token.
+      - not (radarr_deployment_root ~ '/').startswith(radarr_data_path ~ '/')
+      - not radarr_data_path.startswith(radarr_deployment_root ~ '/')
+      - radarr_data_container_path is string
+      - radarr_data_container_path is match('^(?:/[A-Za-z0-9._-]+)+$')
+      - (radarr_data_container_path ~ '/') is not search('/\.\.?/')
+      # Never shadow the image's system directories, its /config volume, or its /tmp.
+      - radarr_data_container_path is not
+        match('^/(?:app|bin|boot|config|dev|etc|lib|lib32|lib64|libx32|proc|run|sbin|sys|tmp|usr)(?:/|$)')
+    fail_msg: >-
+      Set selfhosted_data_path to the existing media data root, an absolute host path
+      outside {{ radarr_deployment_root }}, and selfhosted_data_container_path
+      to an absolute container path such as /data, outside system directories, /config, and /tmp.
+
+- name: Validate the Radarr instances
+  ansible.builtin.assert:
+    that:
+      - radarr_instances | length > 0
+      - radarr_instances | map(attribute='hostname', default='')
+        | select('match', '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$') | unique | list | length
+        == radarr_instances | length
+    fail_msg: >-
+      Set radarr_instances to at least one instance, each with a unique hostname in a
+      DNS zone you control.
+
+- name: Validate the Radarr API keys
+  ansible.builtin.assert:
+    that:
+      - radarr_api_keys is defined
+      - radarr_api_keys is mapping
+      - radarr_api_keys | dict2items | selectattr('key', 'in', radarr_instances | map(attribute='name'))
+        | map(attribute='value') | select('string') | select('match', '^[a-f0-9]{32}$') | unique | list | length
+        == radarr_instances | length
+    fail_msg: >-
+      Set radarr_api_keys in the encrypted vault to a different 32-character lowercase
+      hexadecimal key for each instance, keyed by instance name.
+  no_log: true
+
+- name: Validate the Radarr container image
+  ansible.builtin.assert:
+    that:
+      - radarr_image is string
+    quiet: true

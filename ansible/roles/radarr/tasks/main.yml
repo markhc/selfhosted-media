@@ -1,0 +1,25 @@
+---
+- name: Validate the Radarr configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect the shared data path
+  ansible.builtin.stat:
+    path: "{{ radarr_data_path }}"
+  register: radarr_data_stat
+
+- name: Require an existing shared data path
+  ansible.builtin.assert:
+    that:
+      - radarr_data_stat.stat.exists
+      - radarr_data_stat.stat.isdir
+    fail_msg: >-
+      selfhosted_data_path must point to an existing directory;
+      it is never created automatically.
+
+# Instances removed from radarr_instances are no longer managed and keep running.
+- name: Deploy each Radarr instance
+  ansible.builtin.include_tasks: instance.yml
+  loop: "{{ radarr_instances }}"
+  loop_control:
+    loop_var: radarr_instance
+    label: "{{ radarr_instance.name }}"

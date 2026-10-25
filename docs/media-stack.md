@@ -2,9 +2,10 @@
 
 The download and library-management services share one contract so they can
 reach each other and hand files over without copying:
-[qBittorrent](services/qbittorrent.md) and [qui](services/qui.md) today, with
-Prowlarr, Sonarr, and Radarr following the same rules. Each one remains an independently selectable
-service with its own role; Sonarr and Radarr also run as
+[qBittorrent](services/qbittorrent.md), [qui](services/qui.md),
+[Sonarr](services/sonarr.md), and [Radarr](services/radarr.md) today, with
+Prowlarr following the same rules. Each one remains an independently
+selectable service with its own role; Sonarr and Radarr also run as
 [several instances](#multiple-instances). This guide covers only what they
 share.
 
@@ -23,8 +24,8 @@ all of them must be selected on the same host.
 | `qbittorrent` ([guide](services/qbittorrent.md)) | `127.10.0.1` | `8080` | Yes, also as a fallback next to qui |
 | `qui` ([guide](services/qui.md)) | `127.10.0.2` | `7476` | Yes |
 | `prowlarr` (planned) | `127.10.0.3` | `9696` | Yes |
-| `sonarr-<instance>` (planned) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
-| `radarr-<instance>` (planned) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
+| `sonarr-<instance>` ([guide](services/sonarr.md)) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
+| `radarr-<instance>` ([guide](services/radarr.md)) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
 
 - Override a single-instance service's address with `<service>_address`, for
   example `qbittorrent_address`. Sonarr and Radarr instances set `address` in
@@ -52,7 +53,7 @@ supports several instances of each, for example:
 | Radarr `hd` | 1080p movies |
 | Radarr `uhd` | 4K movies |
 
-The roles will follow these rules:
+The roles follow these rules:
 
 - Each app keeps one role and one selection key (`sonarr`, `radarr`).
   `make deploy-sonarr` deploys every Sonarr instance listed in the inventory,
@@ -74,7 +75,8 @@ The roles will follow these rules:
   `/opt/selfhosted/sonarr-tv`) with its own Caddy site. Removing an instance
   from the list stops managing it but leaves it running, like disabling a
   service.
-- Each instance has its own vaulted API key, keyed by instance name.
+- Each instance has its own vaulted API key, keyed by instance name, for
+  example `sonarr_api_keys.anime`.
 - Each instance uses its own qBittorrent category and folders,
   `/data/torrents/<category>` and `/data/media/<category>`, so instances never
   import each other's downloads.

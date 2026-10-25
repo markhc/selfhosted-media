@@ -83,5 +83,35 @@ qui_image_tag: "v1.33.1"
 # qui sees the shared data root and qbittorrent_mounts at the same paths as qBittorrent.
 # qui_mounts: []
 
+# --- Sonarr (docs/services/sonarr.md); one Compose project and Caddy site per instance ---
+sonarr_enabled: false
+sonarr_image_repository: ghcr.io/hotio/sonarr
+sonarr_image_tag: "release-4.0.20.3014"
+# Each instance needs a unique name, loopback address, and hostname, plus an API key
+# under its name in the vaulted sonarr_api_keys. Removing an instance leaves it running.
+sonarr_instances: []
+# sonarr_instances:
+#   - name: tv
+#     address: 127.10.1.1
+#     hostname: sonarr.example.com
+#   - name: anime
+#     address: 127.10.1.2
+#     hostname: anime.example.com
+
+# --- Radarr (docs/services/radarr.md); one Compose project and Caddy site per instance ---
+radarr_enabled: false
+radarr_image_repository: ghcr.io/hotio/radarr
+radarr_image_tag: "release-6.4.4.10685"
+# Each instance needs a unique name, loopback address, and hostname, plus an API key
+# under its name in the vaulted radarr_api_keys. Removing an instance leaves it running.
+radarr_instances: []
+# radarr_instances:
+#   - name: hd
+#     address: 127.10.2.1
+#     hostname: radarr.example.com
+#   - name: uhd
+#     address: 127.10.2.2
+#     hostname: radarr-uhd.example.com
+
 # --- ZNC (docs/services/znc.md); runs on a separate bouncer host ---
 znc_enabled: false

@@ -39,6 +39,8 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Audiobookshelf](docs/services/audiobookshelf.md) | `audiobookshelf` | NAS | Private audiobook and podcast server |
 | [qBittorrent](docs/services/qbittorrent.md) | `qbittorrent` | NAS | BitTorrent client for the media stack |
 | [qui](docs/services/qui.md) | `qui` | NAS | Web interface and client proxy for qBittorrent |
+| [Sonarr](docs/services/sonarr.md) | `sonarr` | NAS | TV series management, one or more instances |
+| [Radarr](docs/services/radarr.md) | `radarr` | NAS | Movie management, one or more instances |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
 Enable each service with its `<key>_enabled` flag in the local inventory; see [Select services](docs/getting-started.md#select-services).
