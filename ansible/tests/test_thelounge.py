@@ -42,11 +42,23 @@ class TheLoungeTests(unittest.TestCase):
         self.assertEqual(service["network_mode"], "host")
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
+        self.assertEqual(service["environment"], {"TZ": "UTC"})
         self.assertEqual(service["volumes"], ["./data:/var/opt/thelounge"])
+
+    def test_timezone_follows_shared_setting_unless_overridden(self):
+        for extra, expected in (({"selfhosted_timezone": "America/Sao_Paulo"}, "America/Sao_Paulo"),
+                                ({"selfhosted_timezone": "America/Sao_Paulo", "thelounge_timezone": "Etc/GMT+3"},
+                                 "Etc/GMT+3")):
+            with self.subTest(extra=extra):
+                result = run_role("thelounge", self.directory, {**SETTINGS, **extra}, ("compose.yml",))
+                self.assertEqual(result.returncode, 0, result.stdout)
+                compose = yaml.safe_load((self.directory / "compose.yml").read_text())
+                self.assertEqual(compose["services"]["thelounge"]["environment"], {"TZ": expected})
 
     def test_invalid_inputs_fail(self):
         for extra in ({"selfhosted_services": {"thelounge": {"enabled": True}}},
-                      {"thelounge_hostname": "Not A Hostname"}, {"thelounge_port": 80}):
+                      {"thelounge_hostname": "Not A Hostname"}, {"thelounge_port": 80},
+                      {"selfhosted_timezone": "Not A Timezone"}):
             with self.subTest(extra=extra):
                 result = run_role("thelounge", self.directory, {**SETTINGS, **extra})
                 self.assertNotEqual(result.returncode, 0, result.stdout)

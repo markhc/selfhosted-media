@@ -11,10 +11,12 @@
       - audiobookshelf_port | int < 65536
       - audiobookshelf_uid | int > 0
       - audiobookshelf_gid | int > 0
+      - audiobookshelf_timezone is string
+      - audiobookshelf_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
     fail_msg: >-
       Audiobookshelf requires Debian/Ubuntu, Caddy, an absolute deployment path,
       audiobookshelf_hostname in a DNS zone you control, an unprivileged port,
-      and a non-root UID/GID.
+      a non-root UID/GID, and an IANA timezone name.
 
 - name: Validate the Audiobookshelf library list
   ansible.builtin.assert:

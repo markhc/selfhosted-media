@@ -2,6 +2,8 @@
 caddy_directory: /opt/selfhosted/caddy
 # Optional additional HTTPS listener; set to the host's fixed private LAN IPv4.
 caddy_lan_ip: ""
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+caddy_timezone: "{{ selfhosted_timezone | default('UTC') }}"
 caddy_version: 2.11.7
 caddy_cloudflare_version: v0.2.4
 caddy_cloudflare_api_token: ""

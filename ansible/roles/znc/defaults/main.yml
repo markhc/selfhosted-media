@@ -5,6 +5,8 @@ znc_uid: 10000
 znc_gid: 10000
 znc_port: 6697
 znc_memory_limit: 128m
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+znc_timezone: "{{ selfhosted_timezone | default('UTC') }}"
 znc_buffer_size: 1000
 znc_max_query_buffers: 50
 

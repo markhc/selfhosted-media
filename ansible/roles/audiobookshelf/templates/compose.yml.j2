@@ -9,6 +9,7 @@ services:
     environment:
       HOST: 127.0.0.1
       PORT: "{{ audiobookshelf_port }}"
+      TZ: {{ audiobookshelf_timezone | to_json }}
     healthcheck:
       test:
         - CMD

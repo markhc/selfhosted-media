@@ -58,6 +58,7 @@ class CaddyTests(unittest.TestCase):
         self.assertNotIn("ports", service)
         self.assertEqual(service["build"], {"context": "./build"})
         self.assertIn("./conf:/etc/caddy:ro", service["volumes"])
+        self.assertEqual(service["environment"], {"TZ": "UTC"})
         self.assertNotIn(TOKEN, (self.directory / "compose.yml").read_text())
 
     def test_build_context_excludes_everything_but_the_dockerfile(self):
@@ -68,6 +69,7 @@ class CaddyTests(unittest.TestCase):
         for extra in ({"caddy_cloudflare_api_token": ""}, {"caddy_cloudflare_api_token": "bad\ntoken"},
                       {"caddy_lan_ip": "203.0.113.10"}, {"caddy_lan_ip": "192.168.1.256"},
                       {"caddy_lan_ip": "192.168.01.10"}, {"caddy_directory": "relative"},
+                      {"caddy_timezone": "/UTC"},
                       {"web_stack_cloudflare_api_token": TOKEN}, {"web_stack_lan_ip": ""}):
             with self.subTest(extra=extra):
                 result = run_role("caddy", self.directory, {**SETTINGS, **extra})

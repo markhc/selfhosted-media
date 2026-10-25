@@ -4,7 +4,9 @@
     that:
       - ansible_facts.distribution in ['Debian', 'Ubuntu']
       - caddy_directory is match('^/[a-zA-Z0-9/_-]+$')
-    fail_msg: Caddy requires Debian/Ubuntu and an absolute deployment path.
+      - caddy_timezone is string
+      - caddy_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: Caddy requires Debian/Ubuntu, an absolute deployment path, and an IANA timezone name.
 
 - name: Reject variables from the former combined web stack
   ansible.builtin.assert:

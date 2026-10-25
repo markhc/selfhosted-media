@@ -85,6 +85,22 @@ deploying; for example, the web services require the
 skips management rather than uninstalling it; see
 [Operations](operations.md#service-selection-and-removal).
 
+## Set the timezone
+
+Service containers receive a `TZ` environment variable, which sets the
+timezone for log timestamps and in-app times. It defaults to `UTC`; set an
+IANA timezone name in `group_vars/all.yml`:
+
+```yaml
+selfhosted_timezone: America/Sao_Paulo
+```
+
+To override one service, set `<service>_timezone`, for example
+`znc_timezone` in a bouncer's host variables. The setting applies to Caddy,
+The Lounge, Audiobookshelf, and ZNC. Tailscale is excluded because its image
+has no timezone data, so it always logs in UTC. Changing the value recreates
+the affected containers on the next deployment.
+
 ## Deploy
 
 Deploy all services enabled in the local inventory:

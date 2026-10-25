@@ -9,6 +9,9 @@
       - thelounge_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
       - thelounge_port | int > 1024
       - thelounge_port | int < 65536
+      - thelounge_timezone is string
+      - thelounge_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
     fail_msg: >-
       The Lounge requires Debian/Ubuntu, Caddy, an absolute deployment path,
-      thelounge_hostname in a DNS zone you control, and an unprivileged port.
+      thelounge_hostname in a DNS zone you control, an unprivileged port,
+      and an IANA timezone name.

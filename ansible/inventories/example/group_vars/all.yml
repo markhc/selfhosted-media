@@ -1,4 +1,9 @@
 ---
+# IANA timezone for service containers (log timestamps, schedules),
+# e.g. "America/Sao_Paulo". 
+# Override one service with <service>_timezone.
+selfhosted_timezone: UTC
+
 # Replace in the ignored local inventory with a domain you control.
 thelounge_hostname: lounge.example.com
 audiobookshelf_hostname: audiobooks.example.com

@@ -104,7 +104,7 @@ class ZncTests(unittest.TestCase):
         self.assertEqual(service["image"], "znc:1.10.3-slim")
         self.assertEqual(service["network_mode"], "host")
         self.assertNotIn("ports", service)
-        self.assertNotIn("environment", service)
+        self.assertEqual(service["environment"], {"TZ": "UTC"})
         self.assertEqual(service["user"], "10000:10000")
         self.assertEqual(service["cap_drop"], ["ALL"])
         self.assertTrue(service["read_only"])
@@ -154,6 +154,10 @@ class ZncTests(unittest.TestCase):
             with self.subTest(extra=extra):
                 result = run_role(self.directory, extra=extra)
                 self.assertNotEqual(result.returncode, 0)
+
+    def test_invalid_timezone_fails(self):
+        result = run_role(self.directory, extra={"znc_timezone": "Not A Timezone"})
+        self.assertNotEqual(result.returncode, 0)
 
     def test_sasl_registry_encoding_round_trips(self):
         script = (self.directory / "start.sh").read_text()

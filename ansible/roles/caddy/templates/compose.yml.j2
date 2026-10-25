@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./cloudflare.env
+    environment:
+      TZ: {{ caddy_timezone | to_json }}
     volumes:
       - ./conf:/etc/caddy:ro
       - ./data:/data

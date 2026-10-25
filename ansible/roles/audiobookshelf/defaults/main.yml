@@ -2,6 +2,8 @@
 audiobookshelf_directory: /opt/selfhosted/audiobookshelf
 audiobookshelf_image: ghcr.io/advplyr/audiobookshelf:2.37.2
 audiobookshelf_port: 13378
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+audiobookshelf_timezone: "{{ selfhosted_timezone | default('UTC') }}"
 # The container user must be able to read (and, for writable libraries, write) the media.
 audiobookshelf_uid: 1000
 audiobookshelf_gid: 1000

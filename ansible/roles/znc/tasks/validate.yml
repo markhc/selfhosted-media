@@ -12,7 +12,9 @@
       - znc_buffer_size | int <= 10000
       - znc_max_query_buffers | int >= 1
       - znc_max_query_buffers | int <= 1000
-    fail_msg: ZNC needs Debian/Ubuntu, a private deployment path, a non-root UID/GID, and bounded buffers.
+      - znc_timezone is string
+      - znc_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*\Z')
+    fail_msg: ZNC needs Debian/Ubuntu, a private deployment path, a non-root UID/GID, bounded buffers, and an IANA timezone name.
 
 - name: Validate ZNC certificate settings
   ansible.builtin.assert:

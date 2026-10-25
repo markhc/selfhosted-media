@@ -2,3 +2,5 @@
 thelounge_directory: /opt/selfhosted/thelounge
 thelounge_image: ghcr.io/thelounge/thelounge:4.5.2
 thelounge_port: 9000
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+thelounge_timezone: "{{ selfhosted_timezone | default('UTC') }}"

@@ -16,6 +16,8 @@ services:
     pids_limit: 64
     stop_grace_period: 30s
     entrypoint: ["/bin/sh", "/znc-managed/start.sh"]
+    environment:
+      TZ: {{ znc_timezone | to_json }}
     volumes:
       - ./managed:/znc-managed:ro
       - ./data:/znc-data

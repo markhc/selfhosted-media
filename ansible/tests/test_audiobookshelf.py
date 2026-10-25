@@ -41,7 +41,7 @@ class AudiobookshelfTests(unittest.TestCase):
         self.assertEqual(service["network_mode"], "host")
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
-        self.assertEqual(service["environment"], {"HOST": "127.0.0.1", "PORT": "13378"})
+        self.assertEqual(service["environment"], {"HOST": "127.0.0.1", "PORT": "13378", "TZ": "UTC"})
         self.assertIn("http://127.0.0.1:13378/healthcheck", service["healthcheck"]["test"][3])
 
     def test_libraries_are_explicit_bind_mounts(self):
@@ -60,6 +60,8 @@ class AudiobookshelfTests(unittest.TestCase):
             {"audiobookshelf_hostname": "Not A Hostname"},
             {"audiobookshelf_port": 80},
             {"audiobookshelf_uid": 0},
+            {"audiobookshelf_timezone": "../etc/passwd"},
+            {"audiobookshelf_timezone": "UTC\nPORT: 80"},
             {"audiobookshelf_libraries": "/srv/example/audiobooks"},
             {"audiobookshelf_libraries": [LIBRARIES[0], LIBRARIES[0]]},
             {"audiobookshelf_libraries": [{"name": "Audio Books", "path": "/srv/example"}]},

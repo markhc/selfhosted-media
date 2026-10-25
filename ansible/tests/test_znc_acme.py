@@ -51,7 +51,7 @@ class AcmeTests(unittest.TestCase):
         service = yaml.safe_load((self.directory / "compose.yml").read_text())["services"]["znc"]
         self.assertEqual(service["network_mode"], "host")
         self.assertNotIn("ports", service)
-        self.assertNotIn("environment", service)
+        self.assertEqual(service["environment"], {"TZ": "UTC"})
         self.assertNotIn("acme/", str(service["volumes"]))
         check = service["healthcheck"]["test"][1]
         self.assertIn("-verify_hostname irc.example.com", check)
