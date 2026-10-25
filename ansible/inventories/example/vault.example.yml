@@ -4,7 +4,7 @@
 
 # One controller-only OAuth credential manages policy and creates one-off NAS
 # enrollment keys. It must have the policy scopes and tag:nas-restricted
-# auth_keys write scope documented in the README.
+# auth_keys write scope documented in docs/tailnet.md.
 tailscale_oauth_client_id: ""
 tailscale_oauth_client_secret: ""
 

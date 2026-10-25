@@ -12,6 +12,15 @@
 - Do not commit Terraform state, saved plans, `.terraform/`, Ansible vault passwords, SSH material, gathered facts, or inventories/variable files containing real infrastructure details. Add generated and local-only artifacts to `.gitignore` when their tooling is introduced.
 - Do not put real secrets in example files, defaults, tests, fixtures, command output, comments, or documentation. Reference environment variables or a documented external secret source instead.
 
+## Documentation
+
+- `README.md` is a short index: project summary, quick start, links to the general guides, and the services table. Do not add detailed setup, configuration, or troubleshooting content to it.
+- General guidance that applies across services lives in `docs/` (`getting-started.md`, `tailnet.md`, `operations.md`, `validation.md`). Add a new general guide only for topics that span several services.
+- Each service has its own guide at `docs/services/<service>.md` (for example `znc.md`, `thelounge.md`, a future `qbittorrent.md`). When adding a service, create its guide and add a row to the README services table in the same change; update the relevant general guides (deployment targets, data paths, validation) too.
+- Service guides use these sections where applicable: what the service does, Enable (selection key and required inventory/vault variables), setup steps, Deploy, network exposure, Data (paths, backups, removal behavior), and troubleshooting.
+- Document each fact in one place and link to it with relative Markdown links instead of duplicating it; cross-service topics such as the tailnet policy or OAuth credential belong in the general guides. Keep anchors stable or update every link when renaming a heading.
+- Update the matching guide whenever a change alters a service's variables, targets, paths, exposure, or behavior.
+
 ## Ansible workflow
 
 - Use `make configure` for controller dependencies, local inventory, and encrypted vault setup. Use `make deploy` for the selected stack and the focused deployment/policy targets in the Makefile when needed.
