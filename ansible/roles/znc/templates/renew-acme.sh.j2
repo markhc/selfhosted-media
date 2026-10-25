@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+umask 077
+
+directory={{ znc_directory | quote }}
+fail() {
+    # Certbot diagnostics may include API/account details; never send them to
+    # Ansible, Docker logs or the system journal. Private logs stay under acme/.
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+
+exec 9>"$directory/acme/renew.lock"
+flock -w 900 9 || fail 'ZNC ACME: another certificate operation is still running.'
+
+# No host networking, published ports, Docker socket, or credentials in argv.
+docker run --rm --log-driver none \
+    --user {{ znc_uid | int }}:{{ znc_gid | int }} --read-only \
+    --cap-drop ALL --security-opt no-new-privileges:true \
+    --memory 256m --pids-limit 64 --tmpfs /tmp:size=32m,mode=1777 \
+    --mount "type=bind,src=$directory/acme/config,dst=/etc/letsencrypt" \
+    --mount "type=bind,src=$directory/acme/work,dst=/var/lib/letsencrypt" \
+    --mount "type=bind,src=$directory/acme/logs,dst=/var/log/letsencrypt" \
+    --mount "type=bind,src=$directory/acme/cloudflare.ini,dst=/cloudflare.ini,readonly" \
+    {{ znc_acme_image | quote }} certonly \
+    --non-interactive --agree-tos --email {{ znc_acme_email | quote }} \
+    --server https://acme-v02.api.letsencrypt.org/directory \
+    --dns-cloudflare --dns-cloudflare-credentials /cloudflare.ini \
+    --dns-cloudflare-propagation-seconds {{ znc_acme_dns_propagation_seconds | int }} \
+    --cert-name znc --domain {{ znc_tls_hostname | quote }} --key-type ecdsa \
+    --keep-until-expiring --renew-with-new-domains >/dev/null 2>&1 \
+    || fail 'ZNC ACME: issuance/renewal failed; inspect the private ACME logs on this host.'
+
+changed=$(docker run --rm --log-driver none --network none \
+    --user {{ znc_uid | int }}:{{ znc_gid | int }} --read-only \
+    --cap-drop ALL --security-opt no-new-privileges:true \
+    --mount "type=bind,src=$directory/acme/config,dst=/acme,readonly" \
+    --mount "type=bind,src=$directory/managed/install-acme.sh,dst=/install-acme.sh,readonly" \
+    --mount "type=bind,src=$directory/tls,dst=/znc-tls" \
+    --entrypoint /bin/sh {{ znc_image | quote }} /install-acme.sh 2>/dev/null) \
+    || fail 'ZNC ACME: certificate validation/installation failed; existing TLS files were preserved.'
+
+if [ "$changed" = ZNC_TLS_CHANGED ]; then
+    touch "$directory/tls/acme-restart-required"
+fi
+
+# Keep the marker after a failed restart so the next timer run retries even
+# when Certbot correctly reports that the certificate is not due for renewal.
+if [ "${1:-}" != --no-restart ] && [ -f "$directory/tls/acme-restart-required" ]; then
+    running=$(docker compose --project-directory "$directory" --project-name selfhosted-znc \
+        ps --status running --quiet znc 2>/dev/null) \
+        || fail 'ZNC ACME: could not inspect the bouncer; certificate restart is pending.'
+    # Do not start a bouncer that the operator deliberately stopped.
+    if [ -n "$running" ]; then
+        docker compose --project-directory "$directory" --project-name selfhosted-znc \
+            restart --no-deps znc >/dev/null 2>&1 \
+            || fail 'ZNC ACME: restart failed; the next certificate check will retry.'
+        rm -f "$directory/tls/acme-restart-required"
+    fi
+fi
+if [ "$changed" = ZNC_TLS_CHANGED ] \
+    || { [ "${1:-}" = --no-restart ] && [ -f "$directory/tls/acme-restart-required" ]; }; then
+    printf 'ZNC_TLS_CHANGED\n'
+fi

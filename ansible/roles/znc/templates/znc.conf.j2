@@ -1,0 +1,63 @@
+// Managed by Ansible. Runtime edits are discarded at container startup.
+Version = 1.10.3
+MaxBufferSize = {{ znc_buffer_size | int }}
+LoadModule = corecaps
+SSLCertFile = /znc-tls/{{ 'acme.pem' if znc_tls_mode == 'cloudflare' else 'server.crt' }}
+SSLKeyFile = /znc-tls/{{ 'acme.pem' if znc_tls_mode == 'cloudflare' else 'server.key' }}
+
+<Listener tailscale>
+    Host = {{ znc_tailscale_ip.stdout | trim }}
+    Port = {{ znc_port | int }}
+    IPv4 = true
+    IPv6 = false
+    SSL = true
+    AllowIRC = true
+    AllowWeb = false
+</Listener>
+{% for user in znc_users %}
+
+<User {{ user.name }}>
+    Admin = false
+    Nick = {{ user.nick }}
+    AltNick = {{ user.nick }}_
+    Ident = {{ user.name }}
+    RealName = IRC user
+    DenyLoadMod = true
+    DenySetBindHost = true
+    DenySetNetwork = true
+    MaxNetworks = {{ user.networks | length }}
+    MultiClients = true
+    ChanBufferSize = {{ znc_buffer_size | int }}
+    QueryBufferSize = {{ znc_buffer_size | int }}
+    MaxQueryBuffers = {{ znc_max_query_buffers | int }}
+    AutoClearChanBuffer = false
+    AutoClearQueryBuffer = false
+    <Pass password>
+        Method = Argon2id
+        Hash = {{ user.password_hash }}
+    </Pass>
+{% for network in user.networks %}
+    <Network {{ network.name }}>
+        IRCConnectEnabled = true
+        TrustAllCerts = false
+        TrustPKI = true
+        LoadModule = route_replies
+        LoadModule = savebuff {{ znc_savebuff_password }}
+{% if network.sasl is defined %}
+        LoadModule = sasl
+{% endif %}
+{% for server in network.servers %}
+        Server = {{ server.host }} +{{ server.port | default(6697) | int }}{% if server.password | default('') %} {{ server.password }}{% endif %}
+
+{% endfor %}
+{% for channel in network.channels | default([]) %}
+        <Chan {{ channel.name }}>
+{% if channel.key | default('') %}
+            Key = {{ channel.key }}
+{% endif %}
+        </Chan>
+{% endfor %}
+    </Network>
+{% endfor %}
+</User>
+{% endfor %}

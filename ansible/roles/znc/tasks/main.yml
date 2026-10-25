@@ -1,0 +1,125 @@
+---
+- name: Validate the selected ZNC instance
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Discover the bouncer host's Tailscale IPv4 address
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ nas_tailscale_directory | default('/opt/selfhosted/tailscale') }}"
+      - --project-name
+      - selfhosted-tailscale
+      - exec
+      - -T
+      - tailscale
+      - tailscale
+      - ip
+      - -4
+  register: znc_tailscale_ip
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Explain a failed Tailscale address lookup without exposing its output
+  ansible.builtin.fail:
+    msg: >-
+      Could not query the containerized Tailscale instance
+      (exit {{ znc_tailscale_ip.rc | default(-1) | int }}).
+      deploy-znc does not enroll Tailscale. Enable Tailscale for this host and run
+      make deploy-tailscale ANSIBLE_ARGS='--limit znc_vm' first (replace the example alias),
+      or use make deploy for all explicitly selected services.
+      If already deployed, check its state with make tailscale-status and verify nas_tailscale_directory.
+      Command output is withheld to protect private infrastructure details.
+  when: znc_tailscale_ip.rc | default(-1) | int != 0
+
+- name: Require an enrolled Tailscale host before exposing ZNC
+  ansible.builtin.fail:
+    msg: Tailscale returned no valid private IPv4; enroll this host with make deploy-tailscale before deploying ZNC.
+  when: >-
+    not (znc_tailscale_ip.stdout | trim is match('^100\.(?:6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}$'))
+    or ((znc_tailscale_ip.stdout | trim).split('.') | map('int') | max > 255)
+
+- name: Create the private ZNC project directory
+  ansible.builtin.file:
+    path: "{{ znc_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Create ZNC configuration and persistent data directories
+  ansible.builtin.file:
+    path: "{{ znc_directory }}/{{ item }}"
+    state: directory
+    owner: "{{ znc_uid }}"
+    group: "{{ znc_gid }}"
+    mode: '0700'
+  loop:
+    - managed
+    - data
+    - tls
+
+- name: Manage the explicitly selected listener certificate mode
+  ansible.builtin.import_tasks: tls.yml
+
+- name: Write the authoritative ZNC configuration
+  ansible.builtin.template:
+    src: znc.conf.j2
+    dest: "{{ znc_directory }}/managed/znc.conf"
+    owner: "{{ znc_uid }}"
+    group: "{{ znc_gid }}"
+    mode: '0600'
+  register: znc_config_result
+  no_log: true
+  diff: false
+
+- name: Write the ZNC startup and SASL configuration
+  ansible.builtin.template:
+    src: start.sh.j2
+    dest: "{{ znc_directory }}/managed/start.sh"
+    owner: "{{ znc_uid }}"
+    group: "{{ znc_gid }}"
+    mode: '0600'
+  register: znc_start_result
+  no_log: true
+  diff: false
+
+- name: Write the ZNC Compose project without credentials
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ znc_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge ZNC and restart only for configuration changes
+  community.docker.docker_compose_v2:
+    project_src: "{{ znc_directory }}"
+    project_name: selfhosted-znc
+    state: present
+    recreate: >-
+      {{ 'always' if (znc_config_result is changed or znc_start_result is changed
+      or znc_tls_result is changed) else 'auto' }}
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode
+  no_log: true
+
+- name: Acknowledge an ACME certificate loaded by the converged container
+  ansible.builtin.file:
+    path: "{{ znc_directory }}/tls/acme-restart-required"
+    state: absent
+  when: znc_tls_mode == 'cloudflare' and not ansible_check_mode
+  no_log: true
+  diff: false
+
+- name: Enable unattended certificate checks only after a successful deployment
+  ansible.builtin.systemd_service:
+    name: selfhosted-znc-acme.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: znc_tls_mode == 'cloudflare' and not ansible_check_mode

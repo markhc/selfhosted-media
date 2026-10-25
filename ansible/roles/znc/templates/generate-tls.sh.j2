@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+umask 077
+
+key=/znc-tls/server.key
+cert=/znc-tls/server.crt
+trap 'rm -f /znc-tls/server.key.new /znc-tls/server.crt.new' EXIT
+
+# Preserve the private key across certificate renewals and ordinary redeploys.
+if [ ! -e "$key" ]; then
+    openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:prime256v1 -out "$key.new"
+    mv "$key.new" "$key"
+fi
+chmod 600 "$key"
+key_public=$(openssl pkey -in "$key" -pubout)
+
+if [ -f "$cert" ] \
+    && openssl x509 -in "$cert" -noout -checkend {{ (znc_tls_renew_before_days | int) * 86400 }} >/dev/null 2>&1 \
+    && openssl verify -purpose sslserver -CAfile "$cert" -verify_ip {{ znc_tailscale_ip.stdout | trim }} "$cert" >/dev/null 2>&1 \
+{% if znc_tls_hostname %}
+    && openssl verify -purpose sslserver -CAfile "$cert" -verify_hostname {{ znc_tls_hostname }} "$cert" >/dev/null 2>&1 \
+{% endif %}
+    && [ "$(openssl x509 -in "$cert" -pubkey -noout)" = "$key_public" ]; then
+    chmod 600 "$cert"
+    exit 0
+fi
+
+openssl req -new -x509 -sha256 -key "$key" -out "$cert.new" \
+    -days {{ znc_tls_certificate_days | int }} \
+    -subj '/CN={{ znc_tls_hostname if znc_tls_hostname else znc_tailscale_ip.stdout | trim }}' \
+    -addext 'subjectAltName=IP:{{ znc_tailscale_ip.stdout | trim }}{% if znc_tls_hostname %},DNS:{{ znc_tls_hostname }}{% endif %}' \
+    -addext 'basicConstraints=critical,CA:FALSE' \
+    -addext 'keyUsage=critical,digitalSignature' \
+    -addext 'extendedKeyUsage=serverAuth'
+mv "$cert.new" "$cert"
+printf 'ZNC_TLS_CHANGED\n'

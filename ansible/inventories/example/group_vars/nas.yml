@@ -1,0 +1,13 @@
+---
+selfhosted_services:
+  tailscale:
+    enabled: true
+  caddy:
+    enabled: true
+  thelounge:
+    enabled: true
+  znc:
+    enabled: false
+
+# This becomes the NAS machine name in MagicDNS.
+tailscale_hostname: media-nas

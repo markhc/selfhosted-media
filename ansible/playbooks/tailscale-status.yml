@@ -1,8 +1,13 @@
 ---
-- name: Report the deployed NAS Tailscale status
-  hosts: nas
+- name: Report deployed host Tailscale status
+  hosts: nas:irc_bouncers
   become: true
   gather_facts: false
+
+  pre_tasks:
+    - name: Skip hosts without selected Tailscale services
+      ansible.builtin.meta: end_host
+      when: not ((selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool)
 
   tasks:
     - name: Find the Tailscale container

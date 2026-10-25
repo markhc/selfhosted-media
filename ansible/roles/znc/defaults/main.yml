@@ -1,0 +1,26 @@
+---
+znc_directory: /opt/selfhosted/znc
+znc_image: znc:1.10.3-slim
+znc_uid: 10000
+znc_gid: 10000
+znc_port: 6697
+znc_memory_limit: 128m
+znc_buffer_size: 1000
+znc_max_query_buffers: 50
+
+# Opt in to Let's Encrypt DNS-01 with cloudflare; self_signed needs no DNS API.
+znc_tls_mode: self_signed
+# Required in cloudflare mode; optional additional DNS SAN in self_signed mode.
+znc_tls_hostname: ""
+znc_tls_certificate_days: 365
+znc_tls_renew_before_days: 30
+
+# Cloudflare mode only. Enabling it accepts the Let's Encrypt subscriber terms.
+znc_acme_image: certbot/dns-cloudflare:v5.8.0
+znc_acme_email: ""
+znc_acme_dns_propagation_seconds: 60
+
+# Host-specific confidential inputs belong in the encrypted controller vault.
+znc_users: "{{ (znc_instances | default({})).get(inventory_hostname, {}).get('users', []) }}"
+znc_savebuff_password: "{{ (znc_instances | default({})).get(inventory_hostname, {}).get('savebuff_password', '') }}"
+znc_cloudflare_api_token: "{{ (znc_instances | default({})).get(inventory_hostname, {}).get('cloudflare_api_token', '') }}"

@@ -1,0 +1,14 @@
+[Unit]
+Description=Renew the private ZNC listener certificate with Cloudflare DNS-01
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists={{ znc_directory }}/acme/cloudflare.ini
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart={{ znc_directory }}/managed/renew-acme.sh
+TimeoutStartSec=30min
+StandardOutput=null
+StandardError=journal

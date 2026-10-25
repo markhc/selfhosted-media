@@ -1,15 +1,4 @@
 ---
-selfhosted_services:
-  tailscale:
-    enabled: true
-  caddy:
-    enabled: true
-  thelounge:
-    enabled: true
-
-# This becomes the NAS machine name in MagicDNS.
-tailscale_hostname: media-nas
-
 # Replace in the ignored local inventory with a domain you control.
 thelounge_hostname: lounge.example.com
 

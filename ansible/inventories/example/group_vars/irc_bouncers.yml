@@ -1,0 +1,29 @@
+---
+# Adding a VM alone deploys nothing. Enable each wanted service explicitly.
+selfhosted_services:
+  tailscale:
+    enabled: false
+  znc:
+    enabled: false
+  caddy:
+    enabled: false
+  thelounge:
+    enabled: false
+
+# Override per host when deploying multiple bouncers.
+tailscale_hostname: example-irc
+nas_tailscale_auth_key_tags:
+  - tag:irc
+
+# Default requires no public domain or DNS credential.
+znc_tls_mode: self_signed
+# Optional full DNS SAN in self_signed mode; required public hostname in cloudflare mode.
+znc_tls_hostname: ""
+
+# Opt-in public trust with Let's Encrypt DNS-01 (no inbound public ports).
+# Configure in ignored host_vars for each selected bouncer, and add its dedicated
+# cloudflare_api_token under znc_instances in the encrypted vault.
+# znc_tls_mode: cloudflare
+# znc_tls_hostname: irc.example.com
+# znc_acme_email: operator@example.com
+# znc_acme_dns_propagation_seconds: 60

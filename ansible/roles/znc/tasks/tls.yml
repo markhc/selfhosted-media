@@ -1,0 +1,34 @@
+---
+- name: Check for a previously managed ACME timer when returning to self-signed mode
+  ansible.builtin.stat:
+    path: /etc/systemd/system/selfhosted-znc-acme.timer
+  register: znc_acme_timer
+  when: znc_tls_mode == 'self_signed'
+
+- name: Stop unattended ACME operations before returning to self-signed mode
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+    daemon_reload: true
+  loop:
+    - selfhosted-znc-acme.timer
+    - selfhosted-znc-acme.service
+  when: znc_tls_mode == 'self_signed' and znc_acme_timer.stat.exists
+  no_log: true
+
+- name: Remove the managed DNS credential when ACME is no longer selected
+  ansible.builtin.file:
+    path: "{{ znc_directory }}/acme/cloudflare.ini"
+    state: absent
+  when: znc_tls_mode == 'self_signed'
+  no_log: true
+  diff: false
+
+- name: Manage self-signed TLS without DNS credentials or network access
+  ansible.builtin.include_tasks: tls-self-signed.yml
+  when: znc_tls_mode == 'self_signed'
+
+- name: Manage Cloudflare DNS-01 only when explicitly selected
+  ansible.builtin.include_tasks: tls-cloudflare.yml
+  when: znc_tls_mode == 'cloudflare'

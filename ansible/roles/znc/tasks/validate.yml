@@ -1,0 +1,81 @@
+---
+- name: Validate ZNC deployment settings
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - znc_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - znc_uid | int > 0
+      - znc_gid | int > 0
+      - znc_port | int > 1024
+      - znc_port | int < 65536
+      - znc_buffer_size | int >= 1
+      - znc_buffer_size | int <= 10000
+      - znc_max_query_buffers | int >= 1
+      - znc_max_query_buffers | int <= 1000
+    fail_msg: ZNC needs Debian/Ubuntu, a private deployment path, a non-root UID/GID, and bounded buffers.
+
+- name: Validate ZNC certificate settings
+  ansible.builtin.assert:
+    that:
+      - znc_tls_mode in ['self_signed', 'cloudflare']
+      - znc_tls_hostname is string
+      - znc_tls_hostname == '' or znc_tls_hostname is match('^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}\Z')
+      - znc_tls_certificate_days | int >= 2
+      - znc_tls_certificate_days | int <= 3650
+      - znc_tls_renew_before_days | int >= 1
+      - znc_tls_renew_before_days | int < znc_tls_certificate_days | int
+    fail_msg: Select self_signed or cloudflare, use a full DNS hostname, and keep the self-signed lifetime longer than its renewal window.
+  no_log: true
+
+- name: Require Cloudflare DNS-01 inputs only when explicitly selected
+  ansible.builtin.assert:
+    that:
+      - znc_tls_hostname | length > 0
+      - znc_acme_email is string
+      - znc_acme_email is match('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}\Z')
+      - znc_acme_dns_propagation_seconds | int >= 10
+      - znc_acme_dns_propagation_seconds | int <= 600
+      - znc_cloudflare_api_token is string
+      - znc_cloudflare_api_token is match('^[A-Za-z0-9_-]{20,256}\Z')
+    fail_msg: Cloudflare mode requires a DNS hostname, ACME contact email, propagation delay of 10-600 seconds, and a host-specific vaulted API token.
+    quiet: true
+  when: znc_tls_mode == 'cloudflare'
+  no_log: true
+
+- name: Require host-specific vaulted ZNC credentials
+  ansible.builtin.assert:
+    that:
+      - znc_users is sequence and znc_users is not string and znc_users is not mapping
+      - znc_users | length > 0
+      - znc_users | map(attribute='name') | unique | length == znc_users | length
+      - znc_savebuff_password is string
+      - znc_savebuff_password | length >= 20
+      - znc_savebuff_password is match('^[^\r\n]+$')
+      - znc_savebuff_password is not search('[\x00]')
+      - znc_savebuff_password == znc_savebuff_password | trim
+    fail_msg: Define users and a stable savebuff password of at least 20 characters in the encrypted vault for this inventory host.
+    quiet: true
+  no_log: true
+
+- name: Validate ZNC users
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[A-Za-z][A-Za-z0-9_-]{0,31}\Z')
+      - item.nick is match('^[A-Za-z][A-Za-z0-9_-]{0,29}\Z')
+      - item.password_hash is match('^\$argon2id\$[^\s\x00]+\Z')
+      - item.networks is sequence and item.networks is not string and item.networks is not mapping
+      - item.networks | length > 0
+      - item.networks | map(attribute='name') | unique | length == item.networks | length
+    quiet: true
+  loop: "{{ znc_users }}"
+  no_log: true
+
+- name: Validate each ZNC network
+  ansible.builtin.include_tasks:
+    file: validate-network.yml
+    apply:
+      no_log: true
+  loop: "{{ znc_users | subelements('networks') }}"
+  loop_control:
+    loop_var: znc_user_network
+  no_log: true

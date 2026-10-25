@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+umask 077
+
+lineage=/acme/live/znc
+target=/znc-tls/acme.pem
+trap 'rm -f "$target.new"' EXIT
+
+# A combined PEM permits an atomic key+chain replacement, including key rotation.
+cat "$lineage/privkey.pem" "$lineage/fullchain.pem" > "$target.new"
+chmod 600 "$target.new"
+# Validate exactly what ZNC will read, including the supplied intermediate
+# chain. Never replace the current PEM on failure or fall back to self-signed.
+openssl verify -purpose sslserver -verify_hostname {{ znc_tls_hostname | quote }} \
+    -untrusted "$target.new" "$target.new" >/dev/null 2>&1
+openssl x509 -in "$target.new" -noout -checkend 0 >/dev/null 2>&1
+test "$(openssl x509 -in "$target.new" -pubkey -noout)" = \
+    "$(openssl pkey -in "$target.new" -pubout)"
+if cmp -s "$target.new" "$target"; then
+    chmod 600 "$target"
+    exit 0
+fi
+# Journal the pending reload before the atomic swap, so a crash immediately
+# after installation cannot leave the old certificate in memory indefinitely.
+touch /znc-tls/acme-restart-required
+mv "$target.new" "$target"
+printf 'ZNC_TLS_CHANGED\n'

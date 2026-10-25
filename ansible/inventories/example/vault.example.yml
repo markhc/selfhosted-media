@@ -10,3 +10,29 @@ tailscale_oauth_client_secret: ""
 
 # Required whenever Caddy is enabled, including later certificate renewals.
 web_stack_cloudflare_api_token: ""
+
+# Optional ZNC: keyed by inventory alias so different hosts get different config.
+# Copy this structure inside the encrypted vault; do not put real values here.
+# Generate password_hash with `znc --makepass` (Argon2id); copy only its Hash value.
+znc_instances: {}
+# znc_instances:
+#   znc_vm:
+#     savebuff_password: "REPLACE_WITH_A_STABLE_RANDOM_SECRET_OF_AT_LEAST_20_CHARACTERS"
+#     # Required only for znc_tls_mode: cloudflare; separate from Caddy's token.
+#     cloudflare_api_token: "REPLACE_WITH_A_ZONE_SCOPED_DNS_EDIT_TOKEN"
+#     users:
+#       - name: exampleuser
+#         nick: ExampleNick
+#         password_hash: "REPLACE_WITH_ZNC_ARGON2ID_HASH"
+#         networks:
+#           - name: example_network
+#             servers:
+#               - host: irc.example.net
+#                 port: 6697
+#                 password: ""  # Optional upstream PASS, not the ZNC login password.
+#             sasl:  # Omit the entire block if the network does not use SASL.
+#               username: exampleaccount
+#               password: "REPLACE_WITH_NETWORK_ACCOUNT_PASSWORD"
+#             channels:
+#               - name: "#example-channel"
+#                 key: ""  # Optional channel key.

@@ -1,0 +1,79 @@
+---
+- name: Install the host lock utility for serialized ACME jobs
+  ansible.builtin.apt:
+    name: util-linux
+    state: present
+
+- name: Create the private ACME state directory
+  ansible.builtin.file:
+    path: "{{ znc_directory }}/acme"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Create persistent directories for the non-root Certbot container
+  ansible.builtin.file:
+    path: "{{ znc_directory }}/acme/{{ item }}"
+    state: directory
+    owner: "{{ znc_uid }}"
+    group: "{{ znc_gid }}"
+    mode: '0700'
+  loop:
+    - config
+    - work
+    - logs
+
+- name: Write the host-specific Cloudflare credential outside ZNC mounts
+  ansible.builtin.copy:
+    content: "dns_cloudflare_api_token = {{ znc_cloudflare_api_token }}\n"
+    dest: "{{ znc_directory }}/acme/cloudflare.ini"
+    owner: "{{ znc_uid }}"
+    group: "{{ znc_gid }}"
+    mode: '0600'
+  no_log: true
+  diff: false
+
+- name: Write the certificate validation and atomic installation script
+  ansible.builtin.template:
+    src: install-acme.sh.j2
+    dest: "{{ znc_directory }}/managed/install-acme.sh"
+    owner: root
+    group: root
+    mode: '0644'
+  no_log: true
+  diff: false
+
+- name: Write the serialized ACME issuance and renewal script
+  ansible.builtin.template:
+    src: renew-acme.sh.j2
+    dest: "{{ znc_directory }}/managed/renew-acme.sh"
+    owner: root
+    group: root
+    mode: '0700'
+  no_log: true
+  diff: false
+
+- name: Write the ACME service and twice-daily timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - selfhosted-znc-acme.service
+    - selfhosted-znc-acme.timer
+  no_log: true
+  diff: false
+
+- name: Obtain and validate the public certificate before exposing ZNC
+  ansible.builtin.command:
+    argv:
+      - "{{ znc_directory }}/managed/renew-acme.sh"
+      - --no-restart
+  register: znc_tls_result
+  changed_when: "'ZNC_TLS_CHANGED' in znc_tls_result.stdout_lines"
+  when: not ansible_check_mode
+  no_log: true
+  diff: false

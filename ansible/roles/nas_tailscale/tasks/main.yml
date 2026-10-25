@@ -28,7 +28,7 @@
     that:
       - nas_tailscale_tun.stat.exists
       - nas_tailscale_tun.stat.ischr | default(false)
-    fail_msg: Enable the Linux TUN device on the NAS before deploying Tailscale.
+    fail_msg: Enable the Linux TUN device on the host before deploying Tailscale.
 
 - name: Create Tailscale directories
   ansible.builtin.file:

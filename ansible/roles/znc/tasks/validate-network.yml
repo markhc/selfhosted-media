@@ -1,0 +1,47 @@
+---
+- name: Validate network and channel structure
+  ansible.builtin.assert:
+    that:
+      - znc_user_network.1.name is match('^[A-Za-z][A-Za-z0-9_-]{0,31}\Z')
+      - znc_user_network.1.servers is sequence and znc_user_network.1.servers is not string and znc_user_network.1.servers is not mapping
+      - znc_user_network.1.servers | length > 0
+      - znc_user_network.1.channels | default([]) is sequence
+      - znc_user_network.1.channels | default([]) is not string
+      - znc_user_network.1.channels | default([]) is not mapping
+      - >-
+        znc_user_network.1.channels | default([]) | map(attribute='name') | unique | length
+        == znc_user_network.1.channels | default([]) | length
+    quiet: true
+
+- name: Validate upstream TLS servers and optional server passwords
+  ansible.builtin.assert:
+    that:
+      - item.host is match('^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}\Z')
+      - item.port | default(6697) | int >= 1
+      - item.port | default(6697) | int <= 65535
+      - item.password | default('') is string
+      - item.password | default('') is not search('[\s\x00]')
+    quiet: true
+  loop: "{{ znc_user_network.1.servers }}"
+
+- name: Validate channels and optional channel keys
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[#&][^\s,<>\x00-\x1f]+\Z')
+      - item.key | default('') is string
+      - item.key | default('') is not search('[\s\x00]')
+    quiet: true
+  loop: "{{ znc_user_network.1.channels | default([]) }}"
+
+- name: Validate optional SASL credentials
+  ansible.builtin.assert:
+    that:
+      - znc_user_network.1.sasl is mapping
+      - znc_user_network.1.sasl.username is string
+      - znc_user_network.1.sasl.username | length > 0
+      - znc_user_network.1.sasl.password is string
+      - znc_user_network.1.sasl.password | length > 0
+      - znc_user_network.1.sasl.username is not search('[\r\n\x00]')
+      - znc_user_network.1.sasl.password is not search('[\r\n\x00]')
+    quiet: true
+  when: znc_user_network.1.sasl is defined

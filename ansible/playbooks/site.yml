@@ -1,6 +1,6 @@
 ---
 - name: Configure the media infrastructure
-  hosts: nas
+  hosts: nas:irc_bouncers
   become: true
   gather_facts: true
 
@@ -18,12 +18,17 @@
   roles:
     - role: docker_runtime
       when: >-
-        (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool
-        or (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
-        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool
+        (('all' in ansible_run_tags or 'tailscale' in ansible_run_tags)
+        and (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool)
+        or (('all' in ansible_run_tags or 'web_stack' in ansible_run_tags) and 'nas' in group_names and (
+        (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
+        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool))
+        or (('all' in ansible_run_tags or 'znc' in ansible_run_tags)
+        and (selfhosted_services | default({})).get('znc', {}).get('enabled', false) | bool)
       tags:
         - tailscale
         - web_stack
+        - znc
 
     - role: nas_tailscale
       when: (selfhosted_services | default({})).get('tailscale', {}).get('enabled', false) | bool
@@ -32,7 +37,13 @@
 
     - role: web_stack
       when: >-
+        'nas' in group_names and (
         (selfhosted_services | default({})).get('caddy', {}).get('enabled', false) | bool
-        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool
+        or (selfhosted_services | default({})).get('thelounge', {}).get('enabled', false) | bool)
       tags:
         - web_stack
+
+    - role: znc
+      when: (selfhosted_services | default({})).get('znc', {}).get('enabled', false) | bool
+      tags:
+        - znc

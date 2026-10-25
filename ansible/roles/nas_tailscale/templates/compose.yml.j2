@@ -15,6 +15,6 @@ services:
       TS_USERSPACE: "false"
       TS_AUTH_ONCE: "true"
       TS_HOSTNAME: {{ tailscale_hostname | to_json }}
-      TS_EXTRA_ARGS: "--advertise-tags=tag:nas --ssh=false"
+      TS_EXTRA_ARGS: "--advertise-tags={{ nas_tailscale_auth_key_tags | join(',') }} --ssh=false"
     volumes:
       - ./state:/var/lib/tailscale

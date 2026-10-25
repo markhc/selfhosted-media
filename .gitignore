@@ -7,3 +7,7 @@ __pycache__/
 
 # Each operator keeps connection details and service selections locally.
 ansible/inventories/local/
+
+# Private ACME state / credential copies (normally created only on the host).
+**/acme/
+cloudflare.ini

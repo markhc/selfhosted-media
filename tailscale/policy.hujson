@@ -1,7 +1,9 @@
 {
-  // Only tailnet administrators may reach or assign the NAS identity.
+  // Admins manage service identities. Self-ownership lets a multi-tag OAuth
+  // client mint a key for just one of its tags (a subset requires ownership).
   "tagOwners": {
-    "tag:nas": ["autogroup:admin"],
+    "tag:nas": ["autogroup:admin", "tag:nas"],
+    "tag:irc": ["autogroup:admin", "tag:irc"],
   },
 
   "grants": [
@@ -9,6 +11,26 @@
       "src": ["autogroup:admin"],
       "dst": ["tag:nas"],
       "ip": ["tcp:443"],
+    },
+    // The Lounge connects from the NAS to the optional cloud bouncer.
+    {
+      "src": ["tag:nas", "autogroup:admin"],
+      "dst": ["tag:irc"],
+      "ip": ["tcp:6697"],
+    },
+  ],
+
+  "tests": [
+    {
+      "src": "tag:nas",
+      "proto": "tcp",
+      "accept": ["tag:irc:6697"],
+      "deny": ["tag:irc:22", "tag:irc:443"],
+    },
+    {
+      "src": "tag:irc",
+      "proto": "tcp",
+      "deny": ["tag:nas:22", "tag:nas:443"],
     },
   ],
 

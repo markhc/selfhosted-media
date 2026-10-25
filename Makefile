@@ -16,7 +16,7 @@ VAULT_ARGS = $(if $(wildcard $(VAULT_PASSWORD_FILE)),--vault-password-file $(VAU
 BECOME_ARGS = $(if $(filter 1 true yes,$(ASK_BECOME_PASS)),--ask-become-pass,)
 POLICY_FILE_ARG = $(if $(POLICY_FILE),--extra-vars tailnet_policy_file=$(POLICY_FILE),)
 
-.PHONY: help configure setup inventory vault-init vault-edit deploy deploy-tailscale deploy-web \
+.PHONY: help configure setup inventory vault-init vault-edit deploy deploy-tailscale deploy-web deploy-znc \
 	tailscale-status policy-preview policy-apply policy-replace require-apply-mode check syntax lint test clean
 
 help:
@@ -25,7 +25,8 @@ help:
 	@echo "  make deploy            Deploy every service enabled in the local inventory"
 	@echo "  make deploy-tailscale  Deploy only Docker and Tailscale"
 	@echo "  make deploy-web        Deploy only Docker, Caddy, and The Lounge"
-	@echo "  make tailscale-status  Show the NAS enrollment state and active tailnet"
+	@echo "  make deploy-znc        Deploy only Docker and selected ZNC instances"
+	@echo "  make tailscale-status  Show selected hosts' enrollment state and active tailnet"
 	@echo "  make vault-edit        Edit encrypted deployment credentials"
 	@echo "  make policy-preview    Validate and preview the tailnet policy"
 	@echo "  make policy-apply      Apply only to an untouched default tailnet policy"
@@ -89,6 +90,12 @@ deploy-web: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
 tailscale-status: $(ANSIBLE_PLAYBOOK)
 	$(ANSIBLE_PLAYBOOK) $(BECOME_ARGS) ansible/playbooks/tailscale-status.yml $(ANSIBLE_ARGS)
 
+deploy-znc: $(ANSIBLE_PLAYBOOK) $(COLLECTION_STAMP)
+	@$(MAKE) --no-print-directory require-apply-mode
+	@$(MAKE) --no-print-directory require-vault
+	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) $(BECOME_ARGS) --extra-vars @$(VAULT_FILE) \
+		--tags znc ansible/playbooks/site.yml $(ANSIBLE_ARGS)
+
 policy-preview: $(ANSIBLE_PLAYBOOK)
 	@$(MAKE) --no-print-directory require-vault
 	$(ANSIBLE_PLAYBOOK) $(VAULT_ARGS) -i localhost, --check --extra-vars @$(VAULT_FILE) \
@@ -124,7 +131,10 @@ syntax: $(ANSIBLE_PLAYBOOK)
 	$(ANSIBLE_PLAYBOOK) -i ansible/inventories/example/hosts.yml --syntax-check ansible/playbooks/tailscale-status.yml
 
 lint: $(ANSIBLE_PLAYBOOK)
-	$(ANSIBLE_LINT) ansible/playbooks/site.yml ansible/playbooks/tailnet.yml ansible/playbooks/tailscale-status.yml
+	$(ANSIBLE_LINT) ansible/playbooks/site.yml ansible/playbooks/tailnet.yml ansible/playbooks/tailscale-status.yml ansible/roles
+
+test: $(ANSIBLE_PLAYBOOK)
+	$(VENV)/bin/python -m unittest discover -s ansible/tests -v
 
 clean:
 	rm -f "$(COLLECTION_STAMP)"

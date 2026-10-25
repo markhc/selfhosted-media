@@ -1,0 +1,39 @@
+name: selfhosted-znc
+
+services:
+  znc:
+    image: {{ znc_image | to_json }}
+    user: "{{ znc_uid | int }}:{{ znc_gid | int }}"
+    network_mode: host
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: {{ znc_memory_limit | to_json }}
+    pids_limit: 64
+    stop_grace_period: 30s
+    entrypoint: ["/bin/sh", "/znc-managed/start.sh"]
+    volumes:
+      - ./managed:/znc-managed:ro
+      - ./data:/znc-data
+      - ./tls:/znc-tls:ro
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+    healthcheck:
+{% if znc_tls_mode == 'cloudflare' %}
+      test: ["CMD-SHELL", "timeout 3 openssl s_client -connect {{ znc_tailscale_ip.stdout | trim }}:{{ znc_port | int }} -servername {{ znc_tls_hostname }} -verify_return_error -verify_hostname {{ znc_tls_hostname }} -brief -no_ign_eof </dev/null >/dev/null 2>&1"]
+{% else %}
+      test: ["CMD-SHELL", "timeout 3 openssl s_client -connect {{ znc_tailscale_ip.stdout | trim }}:{{ znc_port | int }} -CAfile /znc-tls/server.crt -verify_return_error -verify_ip {{ znc_tailscale_ip.stdout | trim }} -brief -no_ign_eof </dev/null >/dev/null 2>&1"]
+{% endif %}
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: local
+      options:
+        max-size: "1m"
+        max-file: "2"

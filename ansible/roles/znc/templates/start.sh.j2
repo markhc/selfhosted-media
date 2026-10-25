@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+umask 077
+
+# ZNC requires a writable config for its exclusive lock and runtime writeback.
+# Never let that writeback replace Ansible's authoritative source.
+mkdir -p /znc-data/configs
+cp /znc-managed/znc.conf /znc-data/configs/znc.conf
+{% for user in znc_users %}
+{% for network in user.networks %}
+{% if network.sasl is defined %}
+
+mkdir -p /znc-data/users/{{ user.name }}/networks/{{ network.name }}/moddata/sasl
+# MCString registry escaping uses %xx; rather than URL encoding's %xx.
+cat > /znc-data/users/{{ user.name }}/networks/{{ network.name }}/moddata/sasl/.registry <<'ZNC_SASL_EOF'
+username {{ network.sasl.username | urlencode | regex_replace('%([0-9A-Fa-f]{2})', '%\\1;') }}
+password {{ network.sasl.password | urlencode | regex_replace('%([0-9A-Fa-f]{2})', '%\\1;') }}
+mechanisms PLAIN
+require_auth true
+ZNC_SASL_EOF
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+exec /opt/znc/bin/znc --foreground --datadir=/znc-data

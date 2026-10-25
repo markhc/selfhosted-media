@@ -1,0 +1,39 @@
+---
+- name: Write the ZNC certificate generation script
+  ansible.builtin.template:
+    src: generate-tls.sh.j2
+    dest: "{{ znc_directory }}/managed/generate-tls.sh"
+    owner: "{{ znc_uid }}"
+    group: "{{ znc_gid }}"
+    mode: '0600'
+  no_log: true
+  diff: false
+
+- name: Generate or renew the private ZNC listener certificate
+  ansible.builtin.command:
+    argv:
+      - docker
+      - run
+      - --rm
+      - --network
+      - none
+      - --user
+      - "{{ znc_uid | int }}:{{ znc_gid | int }}"
+      - --read-only
+      - --cap-drop
+      - ALL
+      - --security-opt
+      - no-new-privileges:true
+      - --mount
+      - "type=bind,src={{ znc_directory }}/managed/generate-tls.sh,dst=/generate-tls.sh,readonly"
+      - --mount
+      - "type=bind,src={{ znc_directory }}/tls,dst=/znc-tls"
+      - --entrypoint
+      - /bin/sh
+      - "{{ znc_image }}"
+      - /generate-tls.sh
+  register: znc_tls_result
+  changed_when: "'ZNC_TLS_CHANGED' in znc_tls_result.stdout_lines"
+  when: not ansible_check_mode
+  no_log: true
+  diff: false

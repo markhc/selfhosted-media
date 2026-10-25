@@ -14,11 +14,11 @@
         or nas_tailscale_api_url is match('^http://127\.0\.0\.1:[0-9]+$')
       - nas_tailscale_auth_key_expiry_seconds | int >= 300
       - nas_tailscale_auth_key_expiry_seconds | int <= 86400
-      - nas_tailscale_auth_key_tags == ['tag:nas']
-    fail_msg: Enrollment keys must be short-lived, restricted to tag:nas, and requested only from Tailscale or a loopback test server.
+      - nas_tailscale_auth_key_tags in [['tag:nas'], ['tag:irc']]
+    fail_msg: Enrollment keys must be short-lived, restricted to tag:nas or tag:irc, and requested only from Tailscale or a loopback test server.
     quiet: true
 
-- name: Require the controller OAuth credential for a fresh NAS
+- name: Require the controller OAuth credential for a fresh host
   ansible.builtin.assert:
     that:
       - tailscale_oauth_client_id | default('') | length > 0
@@ -59,12 +59,14 @@
 
     - name: Stop if the OAuth credential cannot create auth keys
       ansible.builtin.fail:
-        msg: OAuth authentication failed; check the credential, auth_keys scope, and tag:nas restriction.
+        msg: >-
+          OAuth authentication failed (HTTP {{ nas_tailscale_oauth_token.status | default(-1) | int }}).
+          Check the vaulted credential and auth_keys scope. API details are withheld.
       when: >-
         nas_tailscale_oauth_token.status | default(-1) != 200
         or (nas_tailscale_oauth_token.json | default({})).get('access_token', '') | length == 0
 
-    - name: Request a short-lived one-off NAS auth key
+    - name: Request a short-lived one-off host auth key
       ansible.builtin.uri:
         url: "{{ nas_tailscale_api_url }}/api/v2/tailnet/-/keys"
         method: POST
@@ -74,7 +76,7 @@
         body_format: json
         body:
           keyType: auth
-          description: selfhosted media NAS enrollment
+          description: selfhosted media host enrollment
           expirySeconds: "{{ nas_tailscale_auth_key_expiry_seconds | int }}"
           capabilities:
             devices:
@@ -99,7 +101,13 @@
 
     - name: Stop if a valid enrollment key was not created
       ansible.builtin.fail:
-        msg: Could not create a one-off tag:nas auth key; check the OAuth client's scope and tag restriction.
+        msg: >-
+          Could not create a one-off auth key
+          (HTTP {{ nas_tailscale_generated_key.status | default(-1) | int }}).
+          Check auth_keys write permission and the live policy's tagOwners.
+          A multi-tag OAuth client needs explicit tag ownership to mint a key for
+          only one of its tags; the supplied policy makes each service tag its own owner.
+          Review and apply that policy change before retrying. API details are withheld.
       when: >-
         nas_tailscale_generated_key.status | default(-1) != 200
         or (nas_tailscale_generated_key.json | default({})).get('key', '')
