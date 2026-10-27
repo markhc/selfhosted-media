@@ -1,0 +1,5 @@
+---
+cadvisor_image: >-
+  {{ cadvisor_image_repository
+  | container_image(cadvisor_image_tag, cadvisor_image_digest) }}
+cadvisor_listen_address: "{{ monitoring_targets_addresses.cadvisor }}"

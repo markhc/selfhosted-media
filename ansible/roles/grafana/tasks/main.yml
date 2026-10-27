@@ -1,0 +1,115 @@
+---
+- name: Validate the Grafana configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Create the Grafana directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ grafana_directory }}", owner: root, group: root, mode: '0700'}
+    - {path: "{{ grafana_directory }}/data", owner: "{{ grafana_uid }}", group: "{{ grafana_gid }}", mode: '0700'}
+    - {path: "{{ grafana_directory }}/provisioning", owner: root, group: root, mode: '0755'}
+    - {path: "{{ grafana_directory }}/provisioning/datasources", owner: root, group: root, mode: '0755'}
+    - {path: "{{ grafana_directory }}/provisioning/dashboards", owner: root, group: root, mode: '0755'}
+    - {path: "{{ grafana_directory }}/dashboards", owner: root, group: root, mode: '0755'}
+
+- name: Write the Grafana administrator password
+  ansible.builtin.copy:
+    content: "{{ grafana_admin_password }}"
+    dest: "{{ grafana_directory }}/admin_password"
+    owner: root
+    group: "{{ grafana_gid }}"
+    mode: '0440'
+  no_log: true
+  diff: false
+  register: grafana_password_file
+
+- name: Write the Grafana data source provisioning
+  ansible.builtin.template:
+    src: datasources.yml.j2
+    dest: "{{ grafana_directory }}/provisioning/datasources/selfhosted.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  register: grafana_datasources
+
+- name: Write the Grafana dashboard provider
+  ansible.builtin.copy:
+    src: dashboards.yml
+    dest: "{{ grafana_directory }}/provisioning/dashboards/selfhosted.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Write the selected Grafana dashboards
+  ansible.builtin.copy:
+    src: "{{ item.source }}"
+    dest: "{{ grafana_directory }}/dashboards/{{ item.destination }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - {source: host-overview.json, destination: host-overview.json, enabled: "{{ node_exporter_enabled | default(false) | bool }}"}
+    - {source: container-overview.json, destination: container-overview.json, enabled: "{{ cadvisor_enabled | default(false) | bool }}"}
+    - {source: container-logs.json, destination: container-logs.json, enabled: "{{ loki_enabled | default(false) | bool }}"}
+  when: item.enabled | bool
+  register: grafana_dashboards
+
+- name: Download the pinned Node Exporter Full dashboard
+  ansible.builtin.get_url:
+    url: "{{ grafana_node_exporter_full_url }}"
+    dest: "{{ grafana_directory }}/dashboards/node-exporter-full.json"
+    checksum: "{{ grafana_node_exporter_full_checksum }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: node_exporter_enabled | default(false) | bool
+  register: grafana_node_exporter_full
+
+- name: Remove dashboards whose data source is not selected
+  ansible.builtin.file:
+    path: "{{ grafana_directory }}/dashboards/{{ item.destination }}"
+    state: absent
+  loop:
+    - {destination: host-overview.json, enabled: "{{ node_exporter_enabled | default(false) | bool }}"}
+    - {destination: node-exporter-full.json, enabled: "{{ node_exporter_enabled | default(false) | bool }}"}
+    - {destination: container-overview.json, enabled: "{{ cadvisor_enabled | default(false) | bool }}"}
+    - {destination: container-logs.json, enabled: "{{ loki_enabled | default(false) | bool }}"}
+  when: not item.enabled | bool
+  register: grafana_removed_dashboards
+
+- name: Write the Grafana Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ grafana_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Grafana
+  community.docker.docker_compose_v2:
+    project_src: "{{ grafana_directory }}"
+    project_name: selfhosted-grafana
+    state: present
+    recreate: >-
+      {{ 'always' if (grafana_password_file is changed or grafana_datasources is changed
+      or grafana_dashboards is changed or grafana_node_exporter_full is changed
+      or grafana_removed_dashboards is changed) else 'auto' }}
+    remove_orphans: true
+    wait: true
+    wait_timeout: 180
+  when: not ansible_check_mode
+
+- name: Publish Grafana through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: grafana
+    caddy_site_hostname: "{{ grafana_hostname }}"
+    caddy_site_upstream: "{{ grafana_listen_address }}:{{ grafana_port }}"
+  when: not ansible_check_mode

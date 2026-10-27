@@ -1,0 +1,11 @@
+---
+loki_directory: /opt/selfhosted/loki
+loki_image_repository: grafana/loki
+loki_image_tag: "3.7.9"
+loki_image_digest: ""
+loki_port: 3100
+loki_retention_period: 168h
+loki_ingestion_rate_mb: 4
+loki_ingestion_burst_size_mb: 8
+# A hard ceiling keeps the optional log store from consuming the NAS unchecked.
+loki_memory_limit: 512m

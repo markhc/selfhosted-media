@@ -35,6 +35,10 @@ radarr_api_keys: {}
 # Required whenever Pi-hole is enabled: its web interface login, at least 8 characters.
 pihole_webui_password: ""
 
+# Required whenever Grafana is enabled: its initial administrator login,
+# at least 8 characters. Grafana reads it from a Compose secret file.
+grafana_admin_password: ""
+
 # Optional ZNC: keyed by inventory alias so different hosts get different config.
 # Copy this structure inside the encrypted vault; do not put real values here.
 # Generate password_hash with `znc --makepass` (Argon2id); copy only its Hash value.

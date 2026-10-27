@@ -1,0 +1,21 @@
+---
+- name: Resolve the monitoring target addresses
+  ansible.builtin.include_role:
+    name: monitoring_targets
+
+- name: Validate the Alloy configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - loki_enabled | default(false) | bool
+      - alloy_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - alloy_port | int > 1024
+      - alloy_port | int < 65536
+      - alloy_uid | int > 0
+      - alloy_gid | int > 0
+      - alloy_memory_limit is match('^[1-9][0-9]*(?:m|g)$')
+      - alloy_image is string
+    fail_msg: >-
+      Alloy requires Debian/Ubuntu, explicitly selected Loki, an absolute
+      deployment path, an unprivileged port and runtime user, a memory limit,
+      and a pinned image.

@@ -1,0 +1,5 @@
+---
+loki_image: >-
+  {{ loki_image_repository
+  | container_image(loki_image_tag, loki_image_digest) }}
+loki_listen_address: "{{ monitoring_targets_addresses.loki }}"

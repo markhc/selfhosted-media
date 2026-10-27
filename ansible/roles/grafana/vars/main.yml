@@ -1,0 +1,5 @@
+---
+grafana_image: >-
+  {{ grafana_image_repository
+  | container_image(grafana_image_tag, grafana_image_digest) }}
+grafana_listen_address: "{{ monitoring_targets_addresses.grafana }}"

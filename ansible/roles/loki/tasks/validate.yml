@@ -1,0 +1,20 @@
+---
+- name: Resolve the monitoring target addresses
+  ansible.builtin.include_role:
+    name: monitoring_targets
+
+- name: Validate the Loki configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - loki_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - loki_port | int > 1024
+      - loki_port | int < 65536
+      - loki_retention_period is match('^[1-9][0-9]*h$')
+      - loki_ingestion_rate_mb | int > 0
+      - loki_ingestion_burst_size_mb | int >= loki_ingestion_rate_mb | int
+      - loki_memory_limit is match('^[1-9][0-9]*(?:m|g)$')
+      - loki_image is string
+    fail_msg: >-
+      Loki requires Debian/Ubuntu, an absolute deployment path, an unprivileged
+      port, hourly retention, positive ingestion limits, a memory limit, and a pinned image.

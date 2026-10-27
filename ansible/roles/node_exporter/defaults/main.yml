@@ -1,0 +1,6 @@
+---
+node_exporter_directory: /opt/selfhosted/node_exporter
+node_exporter_image_repository: quay.io/prometheus/node-exporter
+node_exporter_image_tag: "v1.12.1"
+node_exporter_image_digest: ""
+node_exporter_port: 9100

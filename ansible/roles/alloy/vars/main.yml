@@ -1,0 +1,6 @@
+---
+alloy_image: >-
+  {{ alloy_image_repository
+  | container_image(alloy_image_tag, alloy_image_digest) }}
+alloy_listen_address: "{{ monitoring_targets_addresses.alloy }}"
+alloy_loki_address: "{{ monitoring_targets_addresses.loki }}"

@@ -1,0 +1,9 @@
+---
+prometheus_directory: /opt/selfhosted/prometheus
+prometheus_image_repository: quay.io/prometheus/prometheus
+prometheus_image_tag: "v3.15.1"
+prometheus_image_digest: ""
+prometheus_port: 9090
+prometheus_scrape_interval: 30s
+prometheus_retention_time: 15d
+prometheus_retention_size: 5GB

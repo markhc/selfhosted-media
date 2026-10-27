@@ -1,0 +1,42 @@
+---
+- name: Validate the Loki configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Create the Loki directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - {path: "{{ loki_directory }}", owner: root, group: root, mode: '0700'}
+    - {path: "{{ loki_directory }}/data", owner: '10001', group: '10001', mode: '0700'}
+
+- name: Write the Loki configuration
+  ansible.builtin.template:
+    src: loki.yml.j2
+    dest: "{{ loki_directory }}/loki.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  register: loki_configuration
+
+- name: Write the Loki Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ loki_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Loki
+  community.docker.docker_compose_v2:
+    project_src: "{{ loki_directory }}"
+    project_name: selfhosted-loki
+    state: present
+    recreate: "{{ 'always' if loki_configuration is changed else 'auto' }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode

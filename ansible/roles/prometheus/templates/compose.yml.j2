@@ -1,0 +1,30 @@
+# Managed by Ansible. Prometheus listens only on its monitoring loopback address.
+name: selfhosted-prometheus
+services:
+  prometheus:
+    image: {{ prometheus_image }}
+    network_mode: host
+    restart: unless-stopped
+    user: "65534:65534"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time={{ prometheus_retention_time }}
+      - --storage.tsdb.retention.size={{ prometheus_retention_size }}
+      - --web.listen-address={{ prometheus_listen_address }}:{{ prometheus_port }}
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://{{ prometheus_listen_address }}:{{ prometheus_port }}/-/ready]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data:/prometheus

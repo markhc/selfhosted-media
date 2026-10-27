@@ -6,7 +6,25 @@
 
   vars:
     # Each service role is tagged with its name and selected by a boolean <name>_enabled.
-    selfhosted_service_names: [tailscale, caddy, thelounge, audiobookshelf, qbittorrent, qui, autobrr, prowlarr, sonarr, radarr, pihole, znc]
+    selfhosted_service_names:
+      - tailscale
+      - caddy
+      - thelounge
+      - audiobookshelf
+      - qbittorrent
+      - qui
+      - autobrr
+      - prowlarr
+      - sonarr
+      - radarr
+      - node_exporter
+      - cadvisor
+      - prometheus
+      - loki
+      - alloy
+      - grafana
+      - pihole
+      - znc
     selfhosted_service_flags: >-
       {{ query('ansible.builtin.vars', *(selfhosted_service_names | map('regex_replace', '$', '_enabled')),
       default=false) }}
@@ -101,6 +119,39 @@
       when: "'radarr' in selfhosted_selected"
       tags:
         - radarr
+
+    - role: node_exporter
+      when: "'node_exporter' in selfhosted_selected"
+      tags:
+        - node_exporter
+
+    - role: cadvisor
+      when: "'cadvisor' in selfhosted_selected"
+      tags:
+        - cadvisor
+
+    # Scrapes the selected exporters after they have converged.
+    - role: prometheus
+      when: "'prometheus' in selfhosted_selected"
+      tags:
+        - prometheus
+
+    - role: loki
+      when: "'loki' in selfhosted_selected"
+      tags:
+        - loki
+
+    # Ships Docker logs to the explicitly selected Loki service.
+    - role: alloy
+      when: "'alloy' in selfhosted_selected"
+      tags:
+        - alloy
+
+    # Provision data sources only after the selected backends have converged.
+    - role: grafana
+      when: "'grafana' in selfhosted_selected"
+      tags:
+        - grafana
 
     # After every web service, so its local DNS records include their hostnames.
     - role: pihole

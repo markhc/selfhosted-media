@@ -1,0 +1,11 @@
+{
+  "annotations": {"list": []}, "editable": false, "graphTooltip": 1,
+  "panels": [
+    {"datasource": {"type": "prometheus", "uid": "prometheus"}, "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []}, "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0}, "id": 1, "targets": [{"expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[5m]))", "legendFormat": "{{name}}", "refId": "A"}], "title": "Container CPU", "type": "timeseries"},
+    {"datasource": {"type": "prometheus", "uid": "prometheus"}, "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []}, "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0}, "id": 2, "targets": [{"expr": "sum by (name) (container_memory_working_set_bytes{name!=\"\"})", "legendFormat": "{{name}}", "refId": "A"}], "title": "Container memory", "type": "timeseries"},
+    {"datasource": {"type": "prometheus", "uid": "prometheus"}, "fieldConfig": {"defaults": {"unit": "Bps"}, "overrides": []}, "gridPos": {"h": 9, "w": 24, "x": 0, "y": 9}, "id": 3, "targets": [{"expr": "sum by (name) (rate(container_network_receive_bytes_total{name!=\"\"}[5m]))", "legendFormat": "{{name}} receive", "refId": "A"}, {"expr": "sum by (name) (rate(container_network_transmit_bytes_total{name!=\"\"}[5m]))", "legendFormat": "{{name}} transmit", "refId": "B"}], "title": "Container network", "type": "timeseries"}
+  ],
+  "refresh": "30s", "schemaVersion": 39, "tags": ["self-hosted", "cadvisor"],
+  "templating": {"list": []}, "time": {"from": "now-6h", "to": "now"}, "timezone": "browser",
+  "title": "Container overview", "uid": "selfhosted-container-overview", "version": 1
+}

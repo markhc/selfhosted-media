@@ -14,6 +14,12 @@ prowlarr_enabled: false
 sonarr_enabled: false
 radarr_enabled: false
 pihole_enabled: false
+node_exporter_enabled: false
+cadvisor_enabled: false
+prometheus_enabled: false
+loki_enabled: false
+alloy_enabled: false
+grafana_enabled: false
 
 # --- Tailscale (docs/services/tailscale.md) ---
 tailscale_enabled: false

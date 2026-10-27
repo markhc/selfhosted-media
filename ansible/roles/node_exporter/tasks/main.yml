@@ -1,0 +1,29 @@
+---
+- name: Validate the node_exporter configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Create the node_exporter deployment directory
+  ansible.builtin.file:
+    path: "{{ node_exporter_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Write the node_exporter Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ node_exporter_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge node_exporter
+  community.docker.docker_compose_v2:
+    project_src: "{{ node_exporter_directory }}"
+    project_name: selfhosted-node_exporter
+    state: present
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode

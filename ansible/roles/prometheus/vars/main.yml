@@ -1,0 +1,5 @@
+---
+prometheus_image: >-
+  {{ prometheus_image_repository
+  | container_image(prometheus_image_tag, prometheus_image_digest) }}
+prometheus_listen_address: "{{ monitoring_targets_addresses.prometheus }}"

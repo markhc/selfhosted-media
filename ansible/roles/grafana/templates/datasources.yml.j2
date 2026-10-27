@@ -1,0 +1,32 @@
+# Managed by Ansible.
+apiVersion: 1
+prune: true
+datasources:
+{% if prometheus_enabled | default(false) | bool %}
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://{{ monitoring_targets_addresses.prometheus }}:{{ prometheus_port | default(9090) }}
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      prometheusType: Prometheus
+      prometheusVersion: {{ prometheus_image_tag | default('v3.15.1') | regex_replace('^v', '') | to_json }}
+      timeInterval: {{ prometheus_scrape_interval | default('30s') | to_json }}
+{% endif %}
+{% if loki_enabled | default(false) | bool %}
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://{{ monitoring_targets_addresses.loki }}:{{ loki_port | default(3100) }}
+    editable: false
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+{% endif %}
+{% if not (prometheus_enabled | default(false) | bool) and not (loki_enabled | default(false) | bool) %}
+  []
+{% endif %}

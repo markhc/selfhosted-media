@@ -1,0 +1,67 @@
+---
+- name: Validate the Alloy configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect the Docker socket
+  ansible.builtin.stat:
+    path: /var/run/docker.sock
+  register: alloy_docker_socket
+
+- name: Require the Docker socket
+  ansible.builtin.assert:
+    that:
+      - alloy_docker_socket.stat.exists
+      - alloy_docker_socket.stat.issock | default(false)
+    fail_msg: Alloy requires the local Docker socket at /var/run/docker.sock.
+
+- name: Create the Alloy deployment directory
+  ansible.builtin.file:
+    path: "{{ alloy_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Create the Alloy data directory
+  ansible.builtin.file:
+    path: "{{ alloy_directory }}/data"
+    state: directory
+    owner: "{{ alloy_uid }}"
+    group: "{{ alloy_gid }}"
+    mode: '0700'
+
+- name: Normalize the Alloy data ownership
+  ansible.builtin.file:
+    path: "{{ alloy_directory }}/data"
+    state: directory
+    owner: "{{ alloy_uid }}"
+    group: "{{ alloy_gid }}"
+    recurse: true
+
+- name: Write the Alloy configuration
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: "{{ alloy_directory }}/config.alloy"
+    owner: root
+    group: root
+    mode: '0644'
+  register: alloy_configuration
+
+- name: Write the Alloy Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ alloy_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Alloy
+  community.docker.docker_compose_v2:
+    project_src: "{{ alloy_directory }}"
+    project_name: selfhosted-alloy
+    state: present
+    recreate: "{{ 'always' if alloy_configuration is changed else 'auto' }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+  when: not ansible_check_mode

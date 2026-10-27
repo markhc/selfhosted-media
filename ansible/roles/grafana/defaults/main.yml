@@ -1,0 +1,15 @@
+---
+grafana_directory: /opt/selfhosted/grafana
+grafana_image_repository: grafana/grafana
+grafana_image_tag: "13.2.4"
+grafana_image_digest: ""
+grafana_port: 3000
+grafana_uid: 472
+grafana_gid: 472
+grafana_admin_user: admin
+# Grafana.com dashboard 1860, pinned so upstream edits cannot silently change a deployment.
+grafana_node_exporter_full_revision: 45
+grafana_node_exporter_full_url: >-
+  https://grafana.com/api/dashboards/1860/revisions/{{ grafana_node_exporter_full_revision }}/download
+grafana_node_exporter_full_checksum: >-
+  sha256:184c6b7409f306da75525d7772f71945b10cea23ad16b5d78c4698ea0ea51986

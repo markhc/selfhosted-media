@@ -1,0 +1,7 @@
+---
+cadvisor_directory: /opt/selfhosted/cadvisor
+cadvisor_image_repository: ghcr.io/google/cadvisor
+cadvisor_image_tag: "v0.60.6"
+cadvisor_image_digest: ""
+cadvisor_port: 8080
+cadvisor_housekeeping_interval: 30s
