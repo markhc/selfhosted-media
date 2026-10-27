@@ -1,0 +1,45 @@
+# Managed by Ansible. autobrr listens on its own loopback address only, behind Caddy.
+name: selfhosted-autobrr
+services:
+  autobrr:
+    image: {{ autobrr_image }}
+    network_mode: host
+    restart: unless-stopped
+    user: "{{ autobrr_uid }}:{{ autobrr_gid }}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    # Peers in the media stack, by name.
+    extra_hosts:
+{% for name, address in media_hosts_addresses | dictsort %}
+      - "{{ name }}:{{ address }}"
+{% endfor %}
+    environment:
+      AUTOBRR__HOST: {{ autobrr_listen_address | to_json }}
+      AUTOBRR__PORT: "{{ autobrr_port }}"
+      AUTOBRR__CORS_ALLOWED_ORIGINS: {{ ('https://' ~ autobrr_hostname) | to_json }}
+      AUTOBRR__LOG_LEVEL: {{ autobrr_log_level | to_json }}
+      # The image tag pins the version; upgrades go through the inventory.
+      AUTOBRR__CHECK_FOR_UPDATES: "false"
+      TZ: {{ autobrr_timezone | to_json }}
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --max-time
+        - "5"
+        - --output
+        - /dev/null
+        - http://{{ autobrr_listen_address }}:{{ autobrr_port }}/api/healthz/readiness
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    volumes:
+      - ./config:/config

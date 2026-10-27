@@ -39,6 +39,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Audiobookshelf](docs/services/audiobookshelf.md) | `audiobookshelf` | NAS | Private audiobook and podcast server |
 | [qBittorrent](docs/services/qbittorrent.md) | `qbittorrent` | NAS | BitTorrent client for the media stack |
 | [qui](docs/services/qui.md) | `qui` | NAS | Web interface and client proxy for qBittorrent |
+| [autobrr](docs/services/autobrr.md) | `autobrr` | NAS | Real-time release filtering and download automation |
 | [Prowlarr](docs/services/prowlarr.md) | `prowlarr` | NAS | Indexer manager that syncs indexers to Sonarr and Radarr |
 | [Sonarr](docs/services/sonarr.md) | `sonarr` | NAS | TV series management, one or more instances |
 | [Radarr](docs/services/radarr.md) | `radarr` | NAS | Movie management, one or more instances |

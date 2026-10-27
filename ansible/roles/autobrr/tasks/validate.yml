@@ -1,0 +1,30 @@
+---
+- name: Resolve the media service addresses
+  ansible.builtin.include_role:
+    name: media_hosts
+
+- name: Validate the autobrr configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - caddy_enabled | default(false) | bool
+      - autobrr_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - autobrr_hostname is defined
+      - autobrr_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+      - autobrr_port | int > 1024
+      - autobrr_port | int < 65536
+      - autobrr_log_level in ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE']
+      - autobrr_uid | int > 0
+      - autobrr_gid | int > 0
+      - autobrr_timezone is string
+      - autobrr_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: >-
+      autobrr requires Debian/Ubuntu, Caddy, an absolute deployment path,
+      autobrr_hostname in a DNS zone you control, an unprivileged port, an
+      uppercase log level such as INFO, a non-root UID/GID, and an IANA timezone name.
+
+- name: Validate the autobrr container image
+  ansible.builtin.assert:
+    that:
+      - autobrr_image is string
+    quiet: true

@@ -1,0 +1,13 @@
+---
+autobrr_directory: /opt/selfhosted/autobrr
+autobrr_image_repository: ghcr.io/autobrr/autobrr
+autobrr_image_tag: "v1.89.0"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+autobrr_image_digest: ""
+autobrr_port: 7474
+# ERROR, WARN, INFO, DEBUG, or TRACE.
+autobrr_log_level: INFO
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+autobrr_timezone: "{{ selfhosted_timezone | default('UTC') }}"
+autobrr_uid: "{{ selfhosted_data_uid | default(1000) }}"
+autobrr_gid: "{{ selfhosted_data_gid | default(1000) }}"

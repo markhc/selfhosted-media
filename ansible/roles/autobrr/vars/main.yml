@@ -1,0 +1,8 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+autobrr_image: >-
+  {{ autobrr_image_repository
+  | container_image(autobrr_image_tag, autobrr_image_digest) }}
+
+# autobrr binds to the loopback address that the media_hosts role assigns.
+autobrr_listen_address: "{{ media_hosts_addresses.autobrr }}"

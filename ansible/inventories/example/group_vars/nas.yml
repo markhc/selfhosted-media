@@ -83,6 +83,14 @@ qui_image_tag: "v1.33.1"
 # qui sees the shared data root and qbittorrent_mounts at the same paths as qBittorrent.
 # qui_mounts: []
 
+# --- autobrr (docs/services/autobrr.md); real-time download automation ---
+autobrr_enabled: false
+autobrr_image_repository: ghcr.io/autobrr/autobrr
+autobrr_image_tag: "v1.89.0"
+autobrr_hostname: autobrr.example.com
+# autobrr_address: 127.10.0.4
+# autobrr_port: 7474
+
 # --- Prowlarr (docs/services/prowlarr.md); indexer manager for Sonarr and Radarr ---
 # Requires prowlarr_api_key in the vault.
 prowlarr_enabled: false

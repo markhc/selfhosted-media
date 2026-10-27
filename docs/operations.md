@@ -46,6 +46,7 @@ named after these prefixes:
 | [Audiobookshelf](services/audiobookshelf.md) | `audiobookshelf` |
 | [qBittorrent](services/qbittorrent.md) | `qbittorrent` |
 | [qui](services/qui.md) | `qui` |
+| [autobrr](services/autobrr.md) | `autobrr` |
 | [Prowlarr](services/prowlarr.md) | `prowlarr` |
 | [Sonarr](services/sonarr.md) | `sonarr` |
 | [Radarr](services/radarr.md) | `radarr` |
@@ -94,6 +95,7 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/audiobookshelf/` | Audiobookshelf database and metadata |
 | `/opt/selfhosted/qbittorrent/config` | qBittorrent configuration and torrent resume data |
 | `/opt/selfhosted/qui/config` | qui configuration, session secret, and database |
+| `/opt/selfhosted/autobrr/config` | autobrr configuration, database, backups, and stored credentials |
 | `/opt/selfhosted/prowlarr/config` | Prowlarr configuration, database, and backups |
 | `/opt/selfhosted/sonarr-<instance>/config` | Sonarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/radarr-<instance>/config` | Radarr configuration, database, and backups, per instance |

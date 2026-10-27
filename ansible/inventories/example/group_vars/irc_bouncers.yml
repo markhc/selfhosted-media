@@ -9,6 +9,7 @@ thelounge_enabled: false
 audiobookshelf_enabled: false
 qbittorrent_enabled: false
 qui_enabled: false
+autobrr_enabled: false
 prowlarr_enabled: false
 sonarr_enabled: false
 radarr_enabled: false

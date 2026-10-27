@@ -3,7 +3,8 @@
 The download and library-management services share one contract so they can
 reach each other and hand files over without copying:
 [qBittorrent](services/qbittorrent.md), [qui](services/qui.md),
-[Prowlarr](services/prowlarr.md), [Sonarr](services/sonarr.md), and
+[autobrr](services/autobrr.md), [Prowlarr](services/prowlarr.md),
+[Sonarr](services/sonarr.md), and
 [Radarr](services/radarr.md). Each one remains an independently
 selectable service with its own role; Sonarr and Radarr also run as
 [several instances](#multiple-instances). This guide covers only what they
@@ -24,6 +25,7 @@ all of them must be selected on the same host.
 | `qbittorrent` ([guide](services/qbittorrent.md)) | `127.10.0.1` | `8080` | Yes, also as a fallback next to qui |
 | `qui` ([guide](services/qui.md)) | `127.10.0.2` | `7476` | Yes |
 | `prowlarr` ([guide](services/prowlarr.md)) | `127.10.0.3` | `9696` | Yes |
+| `autobrr` ([guide](services/autobrr.md)) | `127.10.0.4` | `7474` | Yes |
 | `sonarr-<instance>` ([guide](services/sonarr.md)) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
 | `radarr-<instance>` ([guide](services/radarr.md)) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
 
@@ -127,6 +129,8 @@ guide lists the values to enter.
 | From | To | Address |
 | --- | --- | --- |
 | qui | qBittorrent | `http://qbittorrent:8080` with the vaulted WebUI credentials; see [Set up](services/qui.md#set-up) |
+| autobrr | qBittorrent | `http://qbittorrent:8080` with the vaulted WebUI credentials; see [Set up](services/autobrr.md#set-up) |
+| autobrr | A Sonarr or Radarr instance | `http://sonarr-<instance>:8989` or `http://radarr-<instance>:7878` with that instance's API key |
 | Each Sonarr and Radarr instance | qBittorrent, through qui's client proxy | Host `qui`, port `7476`, URL base `/proxy/<client key>`, one key per instance |
 | Prowlarr | Each Sonarr and Radarr instance | `http://sonarr-<instance>:8989` or `http://radarr-<instance>:7878` with that instance's API key; see [Connect applications](services/prowlarr.md#connect-applications) |
 | Each Sonarr and Radarr instance | Prowlarr, for synced indexers | `http://prowlarr:9696`, entered in Prowlarr as its server address |
@@ -136,7 +140,7 @@ guide lists the values to enter.
 Migration is manual; Ansible never imports or overwrites existing service
 state. It only creates missing directories and enforces the settings listed in
 each service guide. Move one service at a time, in this order: qBittorrent,
-qui, Prowlarr, Sonarr, Radarr. For each service:
+qui, Prowlarr, Sonarr, Radarr, autobrr. For each service:
 
 1. Check the running version. The pinned image in this repository must be the
    same or newer, because database and configuration migrations only run
