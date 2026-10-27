@@ -1,0 +1,61 @@
+---
+- name: Validate the Prowlarr configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Create the Prowlarr deployment directory
+  ansible.builtin.file:
+    path: "{{ prowlarr_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# Never recursive: migrated configuration keeps the ownership the operator set.
+- name: Create the Prowlarr configuration directory
+  ansible.builtin.file:
+    path: "{{ prowlarr_directory }}/config"
+    state: directory
+    owner: "{{ prowlarr_uid }}"
+    group: "{{ prowlarr_gid }}"
+    mode: '0700'
+
+- name: Write the Prowlarr API key
+  ansible.builtin.copy:
+    content: "PROWLARR__AUTH__APIKEY={{ prowlarr_api_key }}\n"
+    dest: "{{ prowlarr_directory }}/api.env"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  diff: false
+  register: prowlarr_api_key_file
+
+- name: Write the Prowlarr Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ prowlarr_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Prowlarr
+  community.docker.docker_compose_v2:
+    project_src: "{{ prowlarr_directory }}"
+    project_name: selfhosted-prowlarr
+    state: present
+    recreate: "{{ 'always' if prowlarr_api_key_file is changed else 'auto' }}"
+    remove_orphans: true
+    wait: true
+    wait_timeout: 180
+  when: not ansible_check_mode
+  no_log: true
+
+- name: Publish Prowlarr through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: prowlarr
+    caddy_site_hostname: "{{ prowlarr_hostname }}"
+    caddy_site_upstream: "{{ prowlarr_listen_address }}:{{ prowlarr_port }}"
+  when: not ansible_check_mode

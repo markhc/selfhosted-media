@@ -11,11 +11,8 @@ services:
       - /tmp
     # The default 10 seconds can interrupt qBittorrent saving its resume data.
     stop_grace_period: 30m
-    # Peers in the media stack, by name.
-    extra_hosts:
-{% for name, address in media_hosts_addresses | dictsort %}
-      - "{{ name }}:{{ address }}"
-{% endfor %}
+    # No extra_hosts: qBittorrent never connects to its peers, and a changed peer list
+    # would recreate the container and reload every torrent.
     environment:
       QBT_LEGAL_NOTICE: confirm
       QBT_WEBUI_PORT: "{{ qbittorrent_webui_port }}"

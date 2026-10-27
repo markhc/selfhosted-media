@@ -118,9 +118,9 @@ class QbittorrentTests(unittest.TestCase):
             "QBT_LEGAL_NOTICE": "confirm", "QBT_WEBUI_PORT": "8080", "QBT_TORRENTING_PORT": "6881",
             "UMASK": "002", "TZ": "UTC"})
         self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.0.1:8080/")
-        self.assertEqual(service["extra_hosts"], ["qbittorrent:127.10.0.1"])
+        self.assertNotIn("extra_hosts", service)
 
-    def test_peers_resolve_by_name_and_address_can_be_overridden(self):
+    def test_address_can_be_overridden_and_peers_do_not_change_the_project(self):
         instances = [{"name": "tv", "address": "127.10.1.1"}, {"name": "anime", "address": "127.10.1.2"}]
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
             variables = {**SETTINGS, "sonarr_enabled": True, "sonarr_instances": instances,
@@ -128,8 +128,9 @@ class QbittorrentTests(unittest.TestCase):
             result = run_role("qbittorrent", temp, variables, ("compose.yml", "qBittorrent.conf"))
             self.assertEqual(result.returncode, 0, result.stdout)
             service = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["qbittorrent"]
-            self.assertEqual(service["extra_hosts"], [
-                "qbittorrent:127.10.9.9", "sonarr-anime:127.10.1.2", "sonarr-tv:127.10.1.1"])
+            # Selecting another media service must not recreate qBittorrent.
+            self.assertNotIn("extra_hosts", service)
+            self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.9.9:8080/")
             self.assertEqual(webui_settings((Path(temp) / "qBittorrent.conf").read_text())["Address"],
                              "127.10.9.9")
 

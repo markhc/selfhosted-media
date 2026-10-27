@@ -10,6 +10,7 @@ from rolefixture import TEMP_ROOT, assert_cases_fail_validation, run_play
 
 SETTINGS = {
     "qbittorrent_enabled": True,
+    "prowlarr_enabled": True,
     "sonarr_enabled": True,
     "radarr_enabled": True,
     "sonarr_instances": [{"name": "tv", "address": "127.10.1.1"}, {"name": "anime", "address": "127.10.1.2"}],
@@ -40,11 +41,12 @@ class MediaHostsTests(unittest.TestCase):
         result, addresses = resolve(self.temp.name, SETTINGS)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(addresses, {
-            "qbittorrent": "127.10.0.1", "sonarr-tv": "127.10.1.1", "sonarr-anime": "127.10.1.2",
-            "radarr-hd": "127.10.2.1", "radarr-uhd": "127.10.2.2"})
+            "qbittorrent": "127.10.0.1", "prowlarr": "127.10.0.3", "sonarr-tv": "127.10.1.1",
+            "sonarr-anime": "127.10.1.2", "radarr-hd": "127.10.2.1", "radarr-uhd": "127.10.2.2"})
 
     def test_unselected_services_are_left_out(self):
-        result, addresses = resolve(self.temp.name, {**SETTINGS, "radarr_enabled": False, "qui_enabled": True,
+        result, addresses = resolve(self.temp.name, {**SETTINGS, "radarr_enabled": False, "prowlarr_enabled": False,
+                                                     "qui_enabled": True,
                                                      "qui_address": "127.10.0.20"})
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(addresses, {"qbittorrent": "127.10.0.1", "qui": "127.10.0.20",

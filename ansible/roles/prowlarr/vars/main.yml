@@ -1,0 +1,15 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+prowlarr_image: >-
+  {{ prowlarr_image_repository
+  | container_image(prowlarr_image_tag, prowlarr_image_digest) }}
+
+# Prowlarr binds to the loopback address that the media_hosts role assigns.
+prowlarr_listen_address: "{{ media_hosts_addresses.prowlarr }}"
+
+# Host headers Prowlarr accepts besides its built-in localhost names: Caddy passes the
+# public hostname, and media services connect by name or address.
+prowlarr_allowed_hosts:
+  - "{{ prowlarr_hostname }}"
+  - prowlarr
+  - "{{ prowlarr_listen_address }}"

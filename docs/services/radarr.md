@@ -97,9 +97,8 @@ Repeat these steps for each instance.
    - **Category**: the instance's own category, for example `movies` or
      `movies-uhd`. In qui or the qBittorrent WebUI, give that category the
      save path `/data/torrents/<category>`.
-5. Add indexers, or connect Prowlarr to `http://radarr-<name>:7878` with the
-   instance's API key; see
-   [Service connections](../media-stack.md#service-connections).
+5. Add indexers, or connect the instance in Prowlarr as described in
+   [Connect applications](prowlarr.md#connect-applications).
 
 Each instance must use its own category and folders, so instances never
 import each other's downloads.

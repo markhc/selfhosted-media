@@ -3,8 +3,8 @@
 The download and library-management services share one contract so they can
 reach each other and hand files over without copying:
 [qBittorrent](services/qbittorrent.md), [qui](services/qui.md),
-[Sonarr](services/sonarr.md), and [Radarr](services/radarr.md) today, with
-Prowlarr following the same rules. Each one remains an independently
+[Prowlarr](services/prowlarr.md), [Sonarr](services/sonarr.md), and
+[Radarr](services/radarr.md). Each one remains an independently
 selectable service with its own role; Sonarr and Radarr also run as
 [several instances](#multiple-instances). This guide covers only what they
 share.
@@ -13,8 +13,8 @@ share.
 
 Every service in the stack runs on the NAS with host networking. Instead of
 sharing `127.0.0.1`, each service and instance listens on its own address in
-the loopback range on the application's default port, and every media
-container resolves the others by name. Services therefore reach each other at
+the loopback range on the application's default port, and the media
+containers resolve each other by name. Services therefore reach each other at
 addresses such as `http://sonarr-anime:8989`. There is no shared Docker
 network, and only Caddy and qBittorrent's peer port listen beyond loopback, so
 all of them must be selected on the same host.
@@ -23,13 +23,13 @@ all of them must be selected on the same host.
 | --- | --- | --- | --- |
 | `qbittorrent` ([guide](services/qbittorrent.md)) | `127.10.0.1` | `8080` | Yes, also as a fallback next to qui |
 | `qui` ([guide](services/qui.md)) | `127.10.0.2` | `7476` | Yes |
-| `prowlarr` (planned) | `127.10.0.3` | `9696` | Yes |
+| `prowlarr` ([guide](services/prowlarr.md)) | `127.10.0.3` | `9696` | Yes |
 | `sonarr-<instance>` ([guide](services/sonarr.md)) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
 | `radarr-<instance>` ([guide](services/radarr.md)) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
 
 - Override a single-instance service's address with `<service>_address`, for
-  example `qbittorrent_address`. Sonarr and Radarr instances set `address` in
-  their [instance list](#multiple-instances).
+  example `qbittorrent_address` or `prowlarr_address`. Sonarr and Radarr
+  instances set `address` in their [instance list](#multiple-instances).
 - Every address must be unique and in `127.0.0.0/8` outside `127.0.0.0/16`,
   which holds `127.0.0.1`, systemd-resolved's `127.0.0.53`, and Debian's
   `127.0.1.1` hostname entry. Linux routes the whole range to the loopback
@@ -39,6 +39,10 @@ all of them must be selected on the same host.
   changed. A container learns new names only when it is recreated, so after
   adding a service or instance run `make deploy` rather than only
   `make deploy-<service>`.
+- qBittorrent is the exception: it only accepts connections from the others,
+  so it gets no `extra_hosts`. Adding a service or instance therefore never
+  recreates it, which would stop it and reload every torrent. Its "Run external
+  program" commands must use peer addresses rather than names.
 - Caddy proxies each published web UI at the same address and port.
 
 ## Multiple instances
@@ -124,7 +128,8 @@ guide lists the values to enter.
 | --- | --- | --- |
 | qui | qBittorrent | `http://qbittorrent:8080` with the vaulted WebUI credentials; see [Set up](services/qui.md#set-up) |
 | Each Sonarr and Radarr instance | qBittorrent, through qui's client proxy | Host `qui`, port `7476`, URL base `/proxy/<client key>`, one key per instance |
-| Prowlarr | Each Sonarr and Radarr instance | `http://sonarr-<instance>:8989` or `http://radarr-<instance>:7878` with that instance's API key |
+| Prowlarr | Each Sonarr and Radarr instance | `http://sonarr-<instance>:8989` or `http://radarr-<instance>:7878` with that instance's API key; see [Connect applications](services/prowlarr.md#connect-applications) |
+| Each Sonarr and Radarr instance | Prowlarr, for synced indexers | `http://prowlarr:9696`, entered in Prowlarr as its server address |
 
 ## Migrating an existing stack
 

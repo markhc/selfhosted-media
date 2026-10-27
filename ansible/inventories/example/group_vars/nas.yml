@@ -83,6 +83,13 @@ qui_image_tag: "v1.33.1"
 # qui sees the shared data root and qbittorrent_mounts at the same paths as qBittorrent.
 # qui_mounts: []
 
+# --- Prowlarr (docs/services/prowlarr.md); indexer manager for Sonarr and Radarr ---
+# Requires prowlarr_api_key in the vault.
+prowlarr_enabled: false
+prowlarr_image_repository: ghcr.io/hotio/prowlarr
+prowlarr_image_tag: "release-2.6.5.5623"
+# prowlarr_address: 127.10.0.3
+
 # --- Sonarr (docs/services/sonarr.md); one Compose project and Caddy site per instance ---
 sonarr_enabled: false
 sonarr_image_repository: ghcr.io/hotio/sonarr

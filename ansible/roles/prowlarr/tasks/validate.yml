@@ -1,0 +1,41 @@
+---
+- name: Resolve the media service addresses
+  ansible.builtin.include_role:
+    name: media_hosts
+
+- name: Validate the Prowlarr configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - caddy_enabled | default(false) | bool
+      - prowlarr_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - prowlarr_hostname is defined
+      - prowlarr_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+      - prowlarr_port | int > 1024
+      - prowlarr_port | int < 65536
+      - prowlarr_log_level in ['info', 'debug', 'trace']
+      - prowlarr_uid | int > 0
+      - prowlarr_gid | int > 0
+      - prowlarr_timezone is string
+      - prowlarr_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+    fail_msg: >-
+      Prowlarr requires Debian/Ubuntu, Caddy, an absolute deployment path, prowlarr_hostname
+      in a DNS zone you control, an unprivileged port, a lowercase log level such as info,
+      a non-root UID/GID, and an IANA timezone name.
+
+- name: Validate the Prowlarr API key
+  ansible.builtin.assert:
+    that:
+      - prowlarr_api_key is defined
+      - prowlarr_api_key is string
+      - prowlarr_api_key is match('^[a-f0-9]{32}$')
+    fail_msg: >-
+      Set prowlarr_api_key in the encrypted vault to a 32-character lowercase
+      hexadecimal key.
+  no_log: true
+
+- name: Validate the Prowlarr container image
+  ansible.builtin.assert:
+    that:
+      - prowlarr_image is string
+    quiet: true

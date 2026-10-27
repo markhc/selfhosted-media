@@ -1,0 +1,54 @@
+# Managed by Ansible. Prowlarr listens on its own loopback address only, behind Caddy.
+name: selfhosted-prowlarr
+services:
+  prowlarr:
+    image: {{ prowlarr_image }}
+    network_mode: host
+    restart: unless-stopped
+    # The image's init starts as root only to run Prowlarr as PUID:PGID and own /config.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    # Peers in the media stack, by name.
+    extra_hosts:
+{% for name, address in media_hosts_addresses | dictsort %}
+      - "{{ name }}:{{ address }}"
+{% endfor %}
+    env_file:
+      - ./api.env
+    # These settings override config.xml on every start.
+    environment:
+      PROWLARR__SERVER__BINDADDRESS: {{ prowlarr_listen_address | to_json }}
+      PROWLARR__SERVER__PORT: "{{ prowlarr_port }}"
+      # Caddy terminates TLS and proxies the hostname's root.
+      PROWLARR__SERVER__ENABLESSL: "false"
+      PROWLARR__SERVER__URLBASE: ""
+      PROWLARR__SERVER__ALLOWEDHOSTS: {{ prowlarr_allowed_hosts | join(',') | to_json }}
+      # Caddy connects from loopback, which must not bypass the login.
+      PROWLARR__AUTH__REQUIRED: Enabled
+      PROWLARR__LOG__LEVEL: {{ prowlarr_log_level | to_json }}
+      PUID: "{{ prowlarr_uid }}"
+      PGID: "{{ prowlarr_gid }}"
+      TZ: {{ prowlarr_timezone | to_json }}
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --max-time
+        - "5"
+        - --output
+        - /dev/null
+        - http://{{ prowlarr_listen_address }}:{{ prowlarr_port }}/ping
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 60s
+    volumes:
+      - ./config:/config

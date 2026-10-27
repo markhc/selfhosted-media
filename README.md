@@ -39,6 +39,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Audiobookshelf](docs/services/audiobookshelf.md) | `audiobookshelf` | NAS | Private audiobook and podcast server |
 | [qBittorrent](docs/services/qbittorrent.md) | `qbittorrent` | NAS | BitTorrent client for the media stack |
 | [qui](docs/services/qui.md) | `qui` | NAS | Web interface and client proxy for qBittorrent |
+| [Prowlarr](docs/services/prowlarr.md) | `prowlarr` | NAS | Indexer manager that syncs indexers to Sonarr and Radarr |
 | [Sonarr](docs/services/sonarr.md) | `sonarr` | NAS | TV series management, one or more instances |
 | [Radarr](docs/services/radarr.md) | `radarr` | NAS | Movie management, one or more instances |
 | [Pi-hole](docs/services/pihole.md) | `pihole` | NAS | LAN ad-blocking DNS that resolves the web services to Caddy's LAN address |

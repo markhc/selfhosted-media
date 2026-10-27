@@ -16,6 +16,10 @@ caddy_cloudflare_api_token: ""
 qbittorrent_webui_username: ""
 qbittorrent_webui_password: ""
 
+# Required whenever Prowlarr is enabled: 32 lowercase hex characters, from
+# `openssl rand -hex 16`. A migrated Prowlarr keeps the ApiKey from its old config.xml.
+prowlarr_api_key: ""
+
 # Required whenever Sonarr or Radarr is enabled: one API key per instance, keyed by
 # instance name. Each key is 32 lowercase hex characters; `openssl rand -hex 16`
 # A migrated instance keeps the ApiKey from its old config.xml.

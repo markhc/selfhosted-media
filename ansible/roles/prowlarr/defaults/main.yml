@@ -1,0 +1,15 @@
+---
+prowlarr_directory: /opt/selfhosted/prowlarr
+prowlarr_image_repository: ghcr.io/hotio/prowlarr
+prowlarr_image_tag: "release-2.6.5.5623"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+prowlarr_image_digest: ""
+prowlarr_port: 9696
+# info, debug, or trace.
+prowlarr_log_level: info
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+prowlarr_timezone: "{{ selfhosted_timezone | default('UTC') }}"
+# Prowlarr handles no media files, but owns its configuration as the shared UID/GID
+# like the rest of the media stack.
+prowlarr_uid: "{{ selfhosted_data_uid | default(1000) }}"
+prowlarr_gid: "{{ selfhosted_data_gid | default(1000) }}"

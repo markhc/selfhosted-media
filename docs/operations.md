@@ -46,6 +46,7 @@ named after these prefixes:
 | [Audiobookshelf](services/audiobookshelf.md) | `audiobookshelf` |
 | [qBittorrent](services/qbittorrent.md) | `qbittorrent` |
 | [qui](services/qui.md) | `qui` |
+| [Prowlarr](services/prowlarr.md) | `prowlarr` |
 | [Sonarr](services/sonarr.md) | `sonarr` |
 | [Radarr](services/radarr.md) | `radarr` |
 | [Pi-hole](services/pihole.md) | `pihole` |
@@ -93,6 +94,7 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/audiobookshelf/` | Audiobookshelf database and metadata |
 | `/opt/selfhosted/qbittorrent/config` | qBittorrent configuration and torrent resume data |
 | `/opt/selfhosted/qui/config` | qui configuration, session secret, and database |
+| `/opt/selfhosted/prowlarr/config` | Prowlarr configuration, database, and backups |
 | `/opt/selfhosted/sonarr-<instance>/config` | Sonarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/radarr-<instance>/config` | Radarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/pihole/etc-pihole` | Pi-hole configuration, lists, and query log |
