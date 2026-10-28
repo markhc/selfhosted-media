@@ -51,12 +51,6 @@ named after these prefixes:
 | [Sonarr](services/sonarr.md) | `sonarr` |
 | [Radarr](services/radarr.md) | `radarr` |
 | [Pi-hole](services/pihole.md) | `pihole` |
-| [node_exporter](services/node-exporter.md) | `node_exporter` |
-| [cAdvisor](services/cadvisor.md) | `cadvisor` |
-| [Prometheus](services/prometheus.md) | `prometheus` |
-| [Loki](services/loki.md) | `loki` |
-| [Alloy](services/alloy.md) | `alloy` |
-| [Grafana](services/grafana.md) | `grafana` |
 | [ZNC](services/znc.md) | `znc` |
 | ZNC certificate renewal | `znc_acme` |
 
@@ -106,10 +100,6 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/sonarr-<instance>/config` | Sonarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/radarr-<instance>/config` | Radarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/pihole/etc-pihole` | Pi-hole configuration, lists, and query log |
-| `/opt/selfhosted/prometheus/data` | Local metrics time series, bounded by time and size |
-| `/opt/selfhosted/loki/data` | Local container logs, bounded by Loki retention |
-| `/opt/selfhosted/alloy/data` | Log-read positions and collector state |
-| `/opt/selfhosted/grafana/data` | Grafana users, settings, and UI-created dashboards |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 
 Back these up securely; do not commit or delete them on redeployment. The

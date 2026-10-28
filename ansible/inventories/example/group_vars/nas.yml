@@ -138,40 +138,5 @@ pihole_hostname: pihole.example.com
 #   - 1.1.1.1
 #   - 1.0.0.1
 
-# --- Monitoring (docs/monitoring.md) ---
-# Baseline host monitoring. Grafana requires grafana_admin_password in the vault.
-node_exporter_enabled: false
-node_exporter_image_repository: quay.io/prometheus/node-exporter
-node_exporter_image_tag: "v1.12.1"
-
-prometheus_enabled: false
-prometheus_image_repository: quay.io/prometheus/prometheus
-prometheus_image_tag: "v3.15.1"
-# prometheus_retention_time: 15d
-# prometheus_retention_size: 5GB
-
-grafana_enabled: false
-grafana_image_repository: grafana/grafana
-grafana_image_tag: "13.2.4"
-grafana_hostname: grafana.example.com
-
-# Optional per-container metrics. cAdvisor needs privileged host access; see its guide.
-cadvisor_enabled: false
-cadvisor_image_repository: ghcr.io/google/cadvisor
-cadvisor_image_tag: "v0.60.6"
-
-# Optional centralized container logs. Enable both; Alloy reads the Docker socket
-# and Loki defaults to seven-day retention with a 512 MiB memory ceiling.
-loki_enabled: false
-loki_image_repository: grafana/loki
-loki_image_tag: "3.7.9"
-# loki_retention_period: 168h
-# loki_memory_limit: 512m
-
-alloy_enabled: false
-alloy_image_repository: grafana/alloy
-alloy_image_tag: "v1.21.2"
-# alloy_memory_limit: 256m
-
 # --- ZNC (docs/services/znc.md); runs on a separate bouncer host ---
 znc_enabled: false

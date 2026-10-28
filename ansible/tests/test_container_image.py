@@ -21,9 +21,7 @@ DIGEST = "sha256:" + "0123456789abcdef" * 4
 PREFIXES = {"nas_tailscale": "nas_tailscale", "caddy": "caddy", "thelounge": "thelounge",
             "audiobookshelf": "audiobookshelf", "qbittorrent": "qbittorrent", "qui": "qui",
             "autobrr": "autobrr", "prowlarr": "prowlarr", "sonarr": "sonarr", "radarr": "radarr",
-            "pihole": "pihole", "node_exporter": "node_exporter", "cadvisor": "cadvisor",
-            "prometheus": "prometheus", "loki": "loki", "alloy": "alloy", "grafana": "grafana",
-            "znc": "znc",
+            "pihole": "pihole", "znc": "znc",
             "znc_acme": "znc"}
 
 

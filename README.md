@@ -28,8 +28,6 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 - [Validation](docs/validation.md): offline checks and container smoke tests.
 - [Media stack](docs/media-stack.md): shared data layout, loopback endpoints,
   and migration for the download and library services.
-- [Monitoring](docs/monitoring.md): host/container metrics, dashboards, and the
-  resource-capped centralized container-log option.
 
 ## Services
 
@@ -46,12 +44,6 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Sonarr](docs/services/sonarr.md) | `sonarr` | NAS | TV series management, one or more instances |
 | [Radarr](docs/services/radarr.md) | `radarr` | NAS | Movie management, one or more instances |
 | [Pi-hole](docs/services/pihole.md) | `pihole` | NAS | LAN ad-blocking DNS that resolves the web services to Caddy's LAN address |
-| [node_exporter](docs/services/node-exporter.md) | `node_exporter` | NAS | Host CPU, memory, disk, and network metrics |
-| [cAdvisor](docs/services/cadvisor.md) | `cadvisor` | NAS | Optional per-container resource metrics |
-| [Prometheus](docs/services/prometheus.md) | `prometheus` | NAS | Local metrics collection and retention |
-| [Loki](docs/services/loki.md) | `loki` | NAS | Optional resource-capped container-log store |
-| [Alloy](docs/services/alloy.md) | `alloy` | NAS | Optional Docker log collector for Loki |
-| [Grafana](docs/services/grafana.md) | `grafana` | NAS | Private metrics and logs dashboards |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 
 Enable each service with its `<key>_enabled` flag in the local inventory; see [Select services](docs/getting-started.md#select-services).

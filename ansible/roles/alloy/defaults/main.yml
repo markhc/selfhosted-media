@@ -1,9 +1,0 @@
----
-alloy_directory: /opt/selfhosted/alloy
-alloy_image_repository: grafana/alloy
-alloy_image_tag: "v1.21.2"
-alloy_image_digest: ""
-alloy_port: 12345
-alloy_memory_limit: 256m
-alloy_uid: 473
-alloy_gid: 473

@@ -63,7 +63,7 @@ class SiteSelectionTests(unittest.TestCase):
                           for role in ROLES if role != "docker_runtime"])
 
     def test_each_service_role_is_tagged_and_gated_by_its_own_key(self):
-        for name in ("caddy", "thelounge", "audiobookshelf", "qbittorrent", "qui", "autobrr", "prowlarr", "sonarr", "radarr", "node_exporter", "cadvisor", "prometheus", "loki", "alloy", "grafana", "pihole", "znc"):
+        for name in ("caddy", "thelounge", "audiobookshelf", "qbittorrent", "qui", "autobrr", "prowlarr", "sonarr", "radarr", "pihole", "znc"):
             with self.subTest(role=name):
                 self.assertEqual(ROLES[name]["tags"], [name])
                 gate = expression(ROLES[name]["when"])

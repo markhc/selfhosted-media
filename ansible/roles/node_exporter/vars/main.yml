@@ -1,5 +1,0 @@
----
-node_exporter_image: >-
-  {{ node_exporter_image_repository
-  | container_image(node_exporter_image_tag, node_exporter_image_digest) }}
-node_exporter_listen_address: "{{ monitoring_targets_addresses.node_exporter }}"
