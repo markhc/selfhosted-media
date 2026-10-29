@@ -1,6 +1,6 @@
 services:
   tailscale:
-    image: {{ nas_tailscale_image }}
+    image: {{ tailscale_image }}
     network_mode: host
     restart: unless-stopped
     cap_add:
@@ -15,6 +15,6 @@ services:
       TS_USERSPACE: "false"
       TS_AUTH_ONCE: "true"
       TS_HOSTNAME: {{ tailscale_machine_name | to_json }}
-      TS_EXTRA_ARGS: "--advertise-tags={{ nas_tailscale_auth_key_tags | join(',') }} --ssh=false"
+      TS_EXTRA_ARGS: "--advertise-tags={{ tailscale_auth_key_tags | join(',') }} --ssh=false"
     volumes:
       - ./state:/var/lib/tailscale

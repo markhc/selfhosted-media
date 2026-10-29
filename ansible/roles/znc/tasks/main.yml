@@ -8,7 +8,7 @@
       - docker
       - compose
       - --project-directory
-      - "{{ nas_tailscale_directory | default('/opt/selfhosted/tailscale') }}"
+      - "{{ tailscale_directory | default('/opt/selfhosted/tailscale') }}"
       - --project-name
       - selfhosted-tailscale
       - exec
@@ -31,7 +31,7 @@
       deploy-znc does not enroll Tailscale. Enable Tailscale for this host and run
       make deploy-tailscale ANSIBLE_ARGS='--limit znc_vm' first (replace the example alias),
       or use make deploy for all explicitly selected services.
-      If already deployed, check its state with make tailscale-status and verify nas_tailscale_directory.
+      If already deployed, check its state with make tailscale-status and verify tailscale_directory.
       Command output is withheld to protect private infrastructure details.
   when: znc_tailscale_ip.rc | default(-1) | int != 0
 

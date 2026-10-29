@@ -53,14 +53,14 @@ class EnrollmentTests(unittest.TestCase):
                     "name": "Test private enrollment against loopback only",
                     "hosts": "localhost", "gather_facts": False,
                     "vars": {
-                        "nas_tailscale_directory": temp,
-                        "nas_tailscale_api_url": f"http://127.0.0.1:{server.server_port}",
-                        "nas_tailscale_auth_key_tags": ["tag:irc"],
+                        "tailscale_directory": temp,
+                        "tailscale_api_url": f"http://127.0.0.1:{server.server_port}",
+                        "tailscale_auth_key_tags": ["tag:irc"],
                         "tailscale_oauth_client_id": "fake-client-id",
                         "tailscale_oauth_client_secret": "fake-oauth-secret",
                     },
                     "tasks": [{"name": "Test enrollment tasks only", "ansible.builtin.import_role": {
-                        "name": "nas_tailscale", "tasks_from": "auth"}}],
+                        "name": "tailscale", "tasks_from": "auth"}}],
                 }]
                 path = Path(temp) / "play.yml"
                 path.write_text(yaml.safe_dump(play))
@@ -112,12 +112,12 @@ class EnrollmentTests(unittest.TestCase):
 
 class MachineNameTests(unittest.TestCase):
     def test_machine_name_is_validated_and_the_former_name_is_refused(self):
-        tasks = yaml.safe_load((ROOT / "ansible/roles/nas_tailscale/tasks/main.yml").read_text())[:2]
-        valid = {"tailscale_machine_name": "media-nas", "nas_tailscale_directory": "/opt/selfhosted/tailscale"}
+        tasks = yaml.safe_load((ROOT / "ansible/roles/tailscale/tasks/main.yml").read_text())[:2]
+        valid = {"tailscale_machine_name": "media-nas", "tailscale_directory": "/opt/selfhosted/tailscale"}
         cases = [({}, True), ({"tailscale_machine_name": "media_nas"}, False),
                  ({"tailscale_machine_name": "-nas"}, False), ({"tailscale_hostname": "media-nas"}, False)]
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            result = run_play(temp, {"nas_tailscale_directory": "/opt/selfhosted/tailscale"}, tasks)
+            result = run_play(temp, {"tailscale_directory": "/opt/selfhosted/tailscale"}, tasks)
             self.assertNotEqual(result.returncode, 0, result.stdout)
             self.assertIn("Set tailscale_machine_name", result.stdout)
             for extra, ok in cases:

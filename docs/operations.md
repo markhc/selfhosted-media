@@ -40,7 +40,7 @@ named after these prefixes:
 
 | Image | Prefix |
 | --- | --- |
-| [Tailscale](services/tailscale.md) | `nas_tailscale` |
+| [Tailscale](services/tailscale.md) | `tailscale` |
 | [Caddy](services/caddy.md) base images | `caddy` |
 | [The Lounge](services/thelounge.md) | `thelounge` |
 | [Audiobookshelf](services/audiobookshelf.md) | `audiobookshelf` |

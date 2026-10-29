@@ -17,11 +17,11 @@ pihole_enabled: false
 
 # --- Tailscale (docs/services/tailscale.md) ---
 tailscale_enabled: false
-nas_tailscale_image_repository: tailscale/tailscale
-nas_tailscale_image_tag: "v1.104.2"
+tailscale_image_repository: tailscale/tailscale
+tailscale_image_tag: "v1.104.2"
 # Override per host when deploying multiple bouncers.
 tailscale_machine_name: example-irc
-nas_tailscale_auth_key_tags:
+tailscale_auth_key_tags:
   - tag:irc
 
 # --- ZNC (docs/services/znc.md) ---

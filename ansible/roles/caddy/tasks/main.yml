@@ -29,7 +29,7 @@
       - docker
       - compose
       - --project-directory
-      - "{{ nas_tailscale_directory | default('/opt/selfhosted/tailscale') }}"
+      - "{{ tailscale_directory | default('/opt/selfhosted/tailscale') }}"
       - --project-name
       - selfhosted-tailscale
       - exec

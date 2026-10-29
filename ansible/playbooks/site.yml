@@ -52,7 +52,7 @@
       tags:
         - always
 
-    - role: nas_tailscale
+    - role: tailscale
       when: "'tailscale' in selfhosted_selected"
       tags:
         - tailscale

@@ -1,0 +1,11 @@
+---
+tailscale_directory: /opt/selfhosted/tailscale
+tailscale_image_repository: tailscale/tailscale
+tailscale_image_tag: "v1.104.2"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+tailscale_image_digest: ""
+tailscale_auth_key: ""
+tailscale_api_url: https://api.tailscale.com
+tailscale_auth_key_expiry_seconds: 600
+tailscale_auth_key_tags:
+  - tag:nas

@@ -18,7 +18,7 @@ FILTER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(FILTER)
 DIGEST = "sha256:" + "0123456789abcdef" * 4
 # Image prefix -> role whose defaults define it.
-PREFIXES = {"nas_tailscale": "nas_tailscale", "caddy": "caddy", "thelounge": "thelounge",
+PREFIXES = {"tailscale": "tailscale", "caddy": "caddy", "thelounge": "thelounge",
             "audiobookshelf": "audiobookshelf", "qbittorrent": "qbittorrent", "qui": "qui",
             "autobrr": "autobrr", "prowlarr": "prowlarr", "sonarr": "sonarr", "radarr": "radarr",
             "pihole": "pihole", "znc": "znc",

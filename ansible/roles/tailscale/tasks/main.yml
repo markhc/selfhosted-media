@@ -12,7 +12,7 @@
     that:
       - tailscale_machine_name is defined
       - tailscale_machine_name is match('^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$')
-      - nas_tailscale_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - tailscale_directory is match('^/[a-zA-Z0-9/_-]+$')
     fail_msg: >-
       Set tailscale_machine_name to this host's MagicDNS machine name (letters,
       digits, and inner hyphens, at most 63 characters) and use an absolute
@@ -21,7 +21,7 @@
 - name: Validate the Tailscale container image
   ansible.builtin.assert:
     that:
-      - nas_tailscale_image is string
+      - tailscale_image is string
     quiet: true
 
 - name: Validate enrollment credentials and existing state
@@ -40,18 +40,18 @@
 - name: Inspect the host TUN device
   ansible.builtin.stat:
     path: /dev/net/tun
-  register: nas_tailscale_tun
+  register: tailscale_tun
 
 - name: Require the host TUN device
   ansible.builtin.assert:
     that:
-      - nas_tailscale_tun.stat.exists
-      - nas_tailscale_tun.stat.ischr | default(false)
+      - tailscale_tun.stat.exists
+      - tailscale_tun.stat.ischr | default(false)
     fail_msg: Enable the Linux TUN device on the host before deploying Tailscale.
 
 - name: Create Tailscale directories
   ansible.builtin.file:
-    path: "{{ nas_tailscale_directory }}/{{ item }}"
+    path: "{{ tailscale_directory }}/{{ item }}"
     state: directory
     owner: root
     group: root
@@ -62,8 +62,8 @@
 
 - name: Write Tailscale enrollment credentials
   ansible.builtin.copy:
-    content: "TS_AUTHKEY={{ nas_tailscale_auth_key }}\n"
-    dest: "{{ nas_tailscale_directory }}/tailscale.env"
+    content: "TS_AUTHKEY={{ tailscale_auth_key }}\n"
+    dest: "{{ tailscale_directory }}/tailscale.env"
     owner: root
     group: root
     mode: '0600'
@@ -73,14 +73,14 @@
 - name: Write the Tailscale Compose project
   ansible.builtin.template:
     src: compose.yml.j2
-    dest: "{{ nas_tailscale_directory }}/compose.yml"
+    dest: "{{ tailscale_directory }}/compose.yml"
     owner: root
     group: root
     mode: '0600'
 
 - name: Converge Tailscale
   community.docker.docker_compose_v2:
-    project_src: "{{ nas_tailscale_directory }}"
+    project_src: "{{ tailscale_directory }}"
     project_name: selfhosted-tailscale
     state: present
     wait: true
@@ -94,12 +94,12 @@
 - name: Finish enrollment without retaining its credential
   when:
     - not ansible_check_mode
-    - nas_tailscale_auth_key | length > 0
+    - tailscale_auth_key | length > 0
   block:
     - name: Remove the consumed enrollment key from the NAS environment file
       ansible.builtin.copy:
         content: "TS_AUTHKEY=\n"
-        dest: "{{ nas_tailscale_directory }}/tailscale.env"
+        dest: "{{ tailscale_directory }}/tailscale.env"
         owner: root
         group: root
         mode: '0600'
@@ -108,7 +108,7 @@
 
     - name: Recreate Tailscale without the enrollment key in its environment
       community.docker.docker_compose_v2:
-        project_src: "{{ nas_tailscale_directory }}"
+        project_src: "{{ tailscale_directory }}"
         project_name: selfhosted-tailscale
         state: present
         recreate: always

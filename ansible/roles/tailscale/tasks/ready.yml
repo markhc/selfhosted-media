@@ -1,0 +1,37 @@
+---
+- name: Wait for Tailscale enrollment
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-directory
+      - "{{ tailscale_directory }}"
+      - --project-name
+      - selfhosted-tailscale
+      - exec
+      - -T
+      - tailscale
+      - tailscale
+      - status
+      - --json
+  register: tailscale_status
+  changed_when: false
+  until: >-
+    tailscale_status.rc == 0 and
+    (tailscale_status.stdout | from_json).get('BackendState', '') == 'Running' and
+    ((tailscale_status.stdout | from_json).get('Self', {})).get('Online', false) and
+    (tailscale_status.stdout | from_json).get('TailscaleIPs', []) | length > 0
+  retries: 24
+  delay: 5
+  when: not ansible_check_mode
+  no_log: true
+
+- name: Report the active Tailscale identity
+  ansible.builtin.debug:
+    msg: >-
+      Tailscale is online as
+      {{ (tailscale_status.stdout | from_json).get('Self', {}).get('HostName', 'unknown') }}
+      in tailnet
+      {{ (tailscale_status.stdout | from_json).get('CurrentTailnet', {}).get(
+         'Name', (tailscale_status.stdout | from_json).get('MagicDNSSuffix', 'unknown')) }}.
+  when: not ansible_check_mode

@@ -16,8 +16,8 @@ tailscale_machine_name: media-nas
 ```
 
 Hosts other than the NAS also set their enrollment tag, for example
-`nas_tailscale_auth_key_tags: ["tag:irc"]` for a [ZNC bouncer](znc.md). The
-`nas_tailscale` role enrolls every selected host despite its historical name.
+`tailscale_auth_key_tags: ["tag:irc"]` for a [ZNC bouncer](znc.md). The
+`tailscale` role enrolls every selected host despite its historical name.
 
 ## Deploy
 

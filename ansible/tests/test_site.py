@@ -59,7 +59,7 @@ class SiteSelectionTests(unittest.TestCase):
         self.assertEqual(selected(self.temp.name, {"caddy_enabled": True, "thelounge_enabled": False,
                                                    "plex_enabled": True}), ["caddy"])
         self.assertEqual(PLAY["vars"]["selfhosted_service_names"],
-                         ["tailscale" if role == "nas_tailscale" else role
+                         ["tailscale" if role == "tailscale" else role
                           for role in ROLES if role != "docker_runtime"])
 
     def test_each_service_role_is_tagged_and_gated_by_its_own_key(self):
@@ -69,8 +69,8 @@ class SiteSelectionTests(unittest.TestCase):
                 gate = expression(ROLES[name]["when"])
                 self.assertTrue(gate(selfhosted_selected=[name]))
                 self.assertFalse(gate(selfhosted_selected=[other for other in ROLES if other != name]))
-        self.assertEqual(ROLES["nas_tailscale"]["tags"], ["tailscale"])
-        self.assertTrue(expression(ROLES["nas_tailscale"]["when"])(selfhosted_selected=["tailscale"]))
+        self.assertEqual(ROLES["tailscale"]["tags"], ["tailscale"])
+        self.assertTrue(expression(ROLES["tailscale"]["when"])(selfhosted_selected=["tailscale"]))
 
     def test_docker_runtime_runs_only_for_targeted_selected_services(self):
         runtime = expression(ROLES["docker_runtime"]["when"])

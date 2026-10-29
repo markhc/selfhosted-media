@@ -52,7 +52,7 @@ local inventory, so copy new example group files manually when upgrading. Use
 `make vault-edit` whenever a token changes. The entire local inventory is
 ignored by Git because it can identify private infrastructure.
 
-When upgrading an existing vault, replace `nas_tailscale_auth_key` and the old
+When upgrading an existing vault, replace `tailscale_auth_key` and the old
 `tailnet_policy_client_*` values with the single `tailscale_oauth_client_id` and
 `tailscale_oauth_client_secret` pair. Deployments from the former combined web
 stack must follow [Migrate from the combined web stack](operations.md#migrate-from-the-combined-web-stack).

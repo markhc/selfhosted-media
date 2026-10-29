@@ -1,0 +1,5 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+tailscale_image: >-
+  {{ tailscale_image_repository
+  | container_image(tailscale_image_tag, tailscale_image_digest) }}

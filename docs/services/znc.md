@@ -33,7 +33,7 @@ No VM is provisioned by this repository.
    thelounge_enabled: false
    audiobookshelf_enabled: false
    qbittorrent_enabled: false
-   nas_tailscale_auth_key_tags: ["tag:irc"]
+   tailscale_auth_key_tags: ["tag:irc"]
    tailscale_machine_name: example-irc
    ```
 
@@ -43,7 +43,7 @@ No VM is provisioned by this repository.
    include `tag:irc` first. Keep each service tag's self-ownership entry from
    the supplied `tagOwners`: the shared multi-tag client needs it to request a
    single-tag enrollment key. Policy deployment remains separate; a service
-   deployment never rewrites it. The existing `nas_tailscale` role also enrolls
+   deployment never rewrites it. The existing `tailscale` role also enrolls
    bouncer hosts despite its historical name. State stays on each host, keys
    remain one-off and are cleared after enrollment, and OAuth credentials stay
    on the controller.
