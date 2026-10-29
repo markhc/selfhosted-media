@@ -6,7 +6,7 @@
 
   vars:
     # Each service role is tagged with its name and selected by a boolean <name>_enabled.
-    selfhosted_service_names: [tailscale, caddy, thelounge, audiobookshelf, qbittorrent, qui, autobrr, prowlarr, sonarr, radarr, pihole, znc]
+    selfhosted_service_names: [tailscale, caddy, thelounge, audiobookshelf, qbittorrent, qui, autobrr, prowlarr, sonarr, radarr, plex, pihole, znc]
     selfhosted_service_flags: >-
       {{ query('ansible.builtin.vars', *(selfhosted_service_names | map('regex_replace', '$', '_enabled')),
       default=false) }}
@@ -101,6 +101,11 @@
       when: "'radarr' in selfhosted_selected"
       tags:
         - radarr
+
+    - role: plex
+      when: "'plex' in selfhosted_selected"
+      tags:
+        - plex
 
     # After every web service, so its local DNS records include their hostnames.
     - role: pihole

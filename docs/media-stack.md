@@ -4,21 +4,22 @@ The download and library-management services share one contract so they can
 reach each other and hand files over without copying:
 [qBittorrent](services/qbittorrent.md), [qui](services/qui.md),
 [autobrr](services/autobrr.md), [Prowlarr](services/prowlarr.md),
-[Sonarr](services/sonarr.md), and
-[Radarr](services/radarr.md). Each one remains an independently
+[Sonarr](services/sonarr.md),
+[Radarr](services/radarr.md), and [Plex](services/plex.md). Each one remains an independently
 selectable service with its own role; Sonarr and Radarr also run as
 [several instances](#multiple-instances). This guide covers only what they
 share.
 
 ## Names and loopback addresses
 
-Every service in the stack runs on the NAS with host networking. Instead of
-sharing `127.0.0.1`, each service and instance listens on its own address in
-the loopback range on the application's default port, and the media
+Every service in the stack runs on the NAS with host networking, except Plex.
+Instead of sharing `127.0.0.1`, each service and instance listens on its own
+address in the loopback range on the application's default port, and the media
 containers resolve each other by name. Services therefore reach each other at
 addresses such as `http://sonarr-anime:8989`. There is no shared Docker
-network, and only Caddy and qBittorrent's peer port listen beyond loopback, so
-all of them must be selected on the same host.
+network, and only Caddy, qBittorrent's peer port, and Plex's optional
+[remote access](services/plex.md#remote-access) port listen beyond loopback,
+so all of them must be selected on the same host.
 
 | Name | Default address | Port | Published through Caddy |
 | --- | --- | --- | --- |
@@ -28,6 +29,7 @@ all of them must be selected on the same host.
 | `autobrr` ([guide](services/autobrr.md)) | `127.10.0.4` | `7474` | Yes |
 | `sonarr-<instance>` ([guide](services/sonarr.md)) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
 | `radarr-<instance>` ([guide](services/radarr.md)) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
+| `plex` ([guide](services/plex.md)) | `127.10.0.5` | `32400` | Yes |
 
 - Override a single-instance service's address with `<service>_address`, for
   example `qbittorrent_address` or `prowlarr_address`. Sonarr and Radarr
@@ -45,6 +47,10 @@ all of them must be selected on the same host.
   so it gets no `extra_hosts`. Adding a service or instance therefore never
   recreates it, which would stop it and reload every torrent. Its "Run external
   program" commands must use peer addresses rather than names.
+- Plex cannot choose its listening address, so it runs in its own Compose
+  network and Docker publishes its port only on its loopback address; see
+  [Plex network exposure](services/plex.md#network-exposure). It never connects
+  to the others, so it gets no `extra_hosts` either.
 - Caddy proxies each published web UI at the same address and port.
 
 ## Multiple instances
@@ -90,7 +96,7 @@ The roles follow these rules:
 ## Shared data layout
 
 Services that handle media files mount one existing host directory at the same
-container path, `/data` by default. A path reported by qBittorrent, such as
+container path, `/data` by default; Plex mounts it read-only. A path reported by qBittorrent, such as
 `/data/torrents/tv/Example.Show.S01`, is then valid in every other service, and
 imports are hardlinks or instant moves instead of copies. The examples in these
 guides use the default `/data`.
@@ -134,13 +140,14 @@ guide lists the values to enter.
 | Each Sonarr and Radarr instance | qBittorrent, through qui's client proxy | Host `qui`, port `7476`, URL base `/proxy/<client key>`, one key per instance |
 | Prowlarr | Each Sonarr and Radarr instance | `http://sonarr-<instance>:8989` or `http://radarr-<instance>:7878` with that instance's API key; see [Connect applications](services/prowlarr.md#connect-applications) |
 | Each Sonarr and Radarr instance | Prowlarr, for synced indexers | `http://prowlarr:9696`, entered in Prowlarr as its server address |
+| Each Sonarr and Radarr instance | Plex, to scan imported files | Host `plex`, port `32400`; see [Connect Sonarr and Radarr](services/plex.md#connect-sonarr-and-radarr) |
 
 ## Migrating an existing stack
 
 Migration is manual; Ansible never imports or overwrites existing service
 state. It only creates missing directories and enforces the settings listed in
 each service guide. Move one service at a time, in this order: qBittorrent,
-qui, Prowlarr, Sonarr, Radarr, autobrr. For each service:
+qui, Prowlarr, Sonarr, Radarr, autobrr, Plex. For each service:
 
 1. Check the running version. The pinned image in this repository must be the
    same or newer, because database and configuration migrations only run

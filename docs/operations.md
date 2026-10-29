@@ -50,6 +50,7 @@ named after these prefixes:
 | [Prowlarr](services/prowlarr.md) | `prowlarr` |
 | [Sonarr](services/sonarr.md) | `sonarr` |
 | [Radarr](services/radarr.md) | `radarr` |
+| [Plex](services/plex.md) | `plex` |
 | [Pi-hole](services/pihole.md) | `pihole` |
 | [ZNC](services/znc.md) | `znc` |
 | ZNC certificate renewal | `znc_acme` |
@@ -99,6 +100,7 @@ pin the two base images, and `caddy_cloudflare_version` the DNS plugin.
 | `/opt/selfhosted/prowlarr/config` | Prowlarr configuration, database, and backups |
 | `/opt/selfhosted/sonarr-<instance>/config` | Sonarr configuration, database, and backups, per instance |
 | `/opt/selfhosted/radarr-<instance>/config` | Radarr configuration, database, and backups, per instance |
+| `/opt/selfhosted/plex/config` | Plex server identity and token, databases, and metadata |
 | `/opt/selfhosted/pihole/etc-pihole` | Pi-hole configuration, lists, and query log |
 | `/opt/selfhosted/znc/` | ZNC data, managed config, TLS material, and ACME state |
 

@@ -1,0 +1,74 @@
+# Managed by Ansible. Plex listens on every address of its own network namespace, so
+# Docker publishes it only on its loopback address, behind Caddy.
+name: selfhosted-plex
+services:
+  plex:
+    image: {{ plex_image }}
+    restart: unless-stopped
+    # The image's init starts as root to run Plex as PUID:PGID, add it to the groups of
+    # the GPU devices, and write the advertised URL into Preferences.xml in /config.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "{{ plex_listen_address }}:{{ plex_port }}:32400"
+{% if plex_remote_access_port | int != 0 %}
+      # Plex Remote Access: the router forwards this LAN port from the internet.
+      - "{{ plex_remote_access_address }}:{{ plex_remote_access_port | int }}:32400"
+{% endif %}
+    # Plex flushes its databases on shutdown.
+    stop_grace_period: 1m
+{% if plex_hardware_acceleration == 'dri' %}
+    # Intel Quick Sync or AMD VA-API; Plex chooses among the render nodes in its settings.
+    devices:
+      - /dev/dri:/dev/dri
+{% elif plex_hardware_acceleration == 'nvidia' %}
+    # NVENC and NVDEC through the NVIDIA Container Toolkit.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
+                - compute
+                - utility
+                - video
+{% endif %}
+    environment:
+      # Plex advertises this address through plex.tv, so clients connect through Caddy.
+      PLEX_ADVERTISE_URL: "https://{{ plex_hostname }}:443"
+      PUID: "{{ plex_uid }}"
+      PGID: "{{ plex_gid }}"
+      UMASK: {{ plex_umask | to_json }}
+      TZ: {{ plex_timezone | to_json }}
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --max-time
+        - "5"
+        - --output
+        - /dev/null
+        - http://127.0.0.1:32400/identity
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 60s
+    volumes:
+      - ./config:/config
+      - type: bind
+        source: {{ plex_data_path | replace('$', '$$') | to_json }}
+        target: {{ plex_data_container_path | to_json }}
+        read_only: {{ plex_data_read_only | to_json }}
+        bind:
+          create_host_path: false

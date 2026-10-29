@@ -128,6 +128,21 @@ radarr_instances: []
 #     address: 127.10.2.2
 #     hostname: radarr-uhd.example.com
 
+# --- Plex (docs/services/plex.md); media server for the libraries under the shared data root ---
+plex_enabled: false
+plex_image_repository: ghcr.io/hotio/plex
+plex_image_tag: "release-1.43.5.11079-b3b13e506"
+plex_hostname: plex.example.com
+# plex_address: 127.10.0.5
+# Hardware transcoding (needs Plex Pass): none, dri for Intel Quick Sync or AMD VA-API,
+# or nvidia for NVENC (needs the NVIDIA driver and Container Toolkit on the NAS).
+# plex_hardware_acceleration: dri
+# Plex mounts the shared data root read-only unless this is false.
+# plex_data_read_only: true
+# Optional Plex Remote Access from the internet: the NAS port your router forwards,
+# published on caddy_lan_ip. See docs/services/plex.md#remote-access.
+# plex_remote_access_port: 12345
+
 # --- Pi-hole (docs/services/pihole.md); LAN DNS that resolves every Caddy hostname ---
 # Requires caddy_lan_ip, and pihole_webui_password in the vault.
 pihole_enabled: false

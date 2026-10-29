@@ -57,13 +57,13 @@ class SiteSelectionTests(unittest.TestCase):
     def test_only_explicitly_enabled_services_are_selected(self):
         self.assertEqual(selected(self.temp.name, {}), [])
         self.assertEqual(selected(self.temp.name, {"caddy_enabled": True, "thelounge_enabled": False,
-                                                   "plex_enabled": True}), ["caddy"])
+                                                   "jellyfin_enabled": True}), ["caddy"])
         self.assertEqual(PLAY["vars"]["selfhosted_service_names"],
                          ["tailscale" if role == "tailscale" else role
                           for role in ROLES if role != "docker_runtime"])
 
     def test_each_service_role_is_tagged_and_gated_by_its_own_key(self):
-        for name in ("caddy", "thelounge", "audiobookshelf", "qbittorrent", "qui", "autobrr", "prowlarr", "sonarr", "radarr", "pihole", "znc"):
+        for name in ("caddy", "thelounge", "audiobookshelf", "qbittorrent", "qui", "autobrr", "prowlarr", "sonarr", "radarr", "plex", "pihole", "znc"):
             with self.subTest(role=name):
                 self.assertEqual(ROLES[name]["tags"], [name])
                 gate = expression(ROLES[name]["when"])

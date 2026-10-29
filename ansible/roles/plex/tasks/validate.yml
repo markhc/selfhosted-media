@@ -1,0 +1,76 @@
+---
+- name: Resolve the media service addresses
+  ansible.builtin.include_role:
+    name: media_hosts
+
+- name: Validate the Plex configuration
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+      - caddy_enabled | default(false) | bool
+      - plex_directory is match('^/[a-zA-Z0-9/_-]+$')
+      - plex_hostname is defined
+      - plex_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+      - plex_uid | int > 0
+      - plex_gid | int > 0
+      - plex_umask is string
+      - plex_umask is match('^0?[0-7]{3}$')
+      - plex_timezone is string
+      - plex_timezone is match('^[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)*$')
+      - plex_data_read_only is boolean
+      - plex_hardware_acceleration in ['none', 'dri', 'nvidia']
+    fail_msg: >-
+      Plex requires Debian/Ubuntu, Caddy, an absolute deployment path, plex_hostname in a
+      DNS zone you control, a non-root UID/GID, a quoted octal umask such as "002", an IANA
+      timezone name, a boolean plex_data_read_only, and plex_hardware_acceleration set to
+      none, dri, or nvidia.
+
+- name: Validate the Plex remote access port
+  ansible.builtin.assert:
+    that:
+      - plex_remote_access_port | string is match('^[0-9]+$')
+      - plex_remote_access_port | int == 0 or (plex_remote_access_port | int > 1024 and plex_remote_access_port | int < 65536)
+    fail_msg: >-
+      Set plex_remote_access_port to 0 (Caddy only) or to the unprivileged NAS port
+      that the router forwards to Plex.
+
+# The router forwards to the NAS's LAN address; never publish Plex on every interface.
+- name: Validate the Plex remote access address
+  ansible.builtin.assert:
+    that:
+      - plex_remote_access_address is string
+      - plex_remote_access_address is match('^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$')
+      - plex_remote_access_address is match('^(?:10\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|192\.168\.)')
+      - (plex_remote_access_address.split('.') | map('int') | max) <= 255
+      - (plex_remote_access_address.split('.') | map('int') | map('string') | join('.')) == plex_remote_access_address
+    fail_msg: >-
+      plex_remote_access_port needs caddy_lan_ip (or plex_remote_access_address, if it
+      differs) set to a quoted RFC1918 IPv4 address assigned to the host's LAN interface.
+  when: plex_remote_access_port | int != 0
+
+- name: Validate the shared data paths for Plex
+  ansible.builtin.assert:
+    that:
+      - plex_data_path is string
+      # Absolute, without a trailing slash, empty, '.', or '..' components.
+      - plex_data_path is match('^(?:/[^/\x00-\x1f\x7f]+)+$')
+      - (plex_data_path ~ '/') is not search('/\.\.?/')
+      # Never expose another service's deployment data, such as Caddy's token.
+      - not ((plex_directory | dirname) ~ '/').startswith(plex_data_path ~ '/')
+      - not plex_data_path.startswith((plex_directory | dirname) ~ '/')
+      - plex_data_container_path is string
+      - plex_data_container_path is match('^(?:/[A-Za-z0-9._-]+)+$')
+      - (plex_data_container_path ~ '/') is not search('/\.\.?/')
+      # Never shadow the image's system directories, its /config volume, or its /tmp.
+      - plex_data_container_path is not
+        match('^/(?:app|bin|boot|config|dev|etc|lib|lib32|lib64|libx32|proc|run|sbin|sys|tmp|usr)(?:/|$)')
+    fail_msg: >-
+      Set selfhosted_data_path to the existing media data root, an absolute host path
+      outside {{ plex_directory | dirname }}, and selfhosted_data_container_path
+      to an absolute container path such as /data, outside system directories, /config, and /tmp.
+
+- name: Validate the Plex container image
+  ansible.builtin.assert:
+    that:
+      - plex_image is string
+    quiet: true

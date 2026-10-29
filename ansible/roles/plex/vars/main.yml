@@ -1,0 +1,10 @@
+---
+# Image reference from the repository, tag, and optional digest in defaults/main.yml.
+plex_image: >-
+  {{ plex_image_repository
+  | container_image(plex_image_tag, plex_image_digest) }}
+
+# Plex cannot choose its bind address, so it runs in its own network namespace and
+# Docker publishes its fixed port only on the loopback address that media_hosts assigns.
+plex_listen_address: "{{ media_hosts_addresses.plex }}"
+plex_port: 32400

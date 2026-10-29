@@ -7,6 +7,7 @@ media_hosts_services:
   qui: "{{ qui_address | default('127.10.0.2') }}"
   prowlarr: "{{ prowlarr_address | default('127.10.0.3') }}"
   autobrr: "{{ autobrr_address | default('127.10.0.4') }}"
+  plex: "{{ plex_address | default('127.10.0.5') }}"
 media_hosts_instance_services:
   - sonarr
   - radarr

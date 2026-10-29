@@ -1,10 +1,26 @@
 # Self Hosted Media
 
-Reusable infrastructure-as-code for a private, self-hosted media stack. Each
-service is independently selectable. Ansible installs Docker Engine on Debian
+Reusable infrastructure-as-code for a private, self-hosted media stack. Ansible installs Docker Engine on Debian
 or Ubuntu hosts and manages every selected service with Docker Compose.
-Optional services such as ZNC can live on a separate cloud VM; no VM is
-provisioned by this repository. No Tailscale SSH server is enabled.
+
+## Hosts
+
+Currently we support deploying the media stack to a single NAS host, with optional Tailscale enrollment for remote access.
+
+You can also optionally deploy the ZNC IRC bouncer to another host, such as a cloud VM, to keep IRC connected when the NAS is offline.
+
+## TODO
+
+These are planned features that are not yet implemented:
+
+- Add Gluetun; There is no VPN support for outgoing traffic yet.
+- Monitoring and alerting; Prometheus, Grafana, and Alertmanager.
+- Backup and restore with restic
+- Support alternatives to Plex, such as Jellyfin or Emby.
+
+**Out of scope:**
+
+- Will not support Windows, TrueNAS, or Synology hosts. The NAS must run a supported Linux distribution (preferably Debian).
 
 ## Quick start
 
@@ -27,7 +43,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
   backups, and credentials on hosts.
 - [Validation](docs/validation.md): offline checks and container smoke tests.
 - [Media stack](docs/media-stack.md): shared data layout, loopback endpoints,
-  and migration for the download and library services.
+  and migration for the download, library, and streaming services.
 
 ## Services
 
@@ -43,6 +59,7 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 | [Prowlarr](docs/services/prowlarr.md) | `prowlarr` | NAS | Indexer manager that syncs indexers to Sonarr and Radarr |
 | [Sonarr](docs/services/sonarr.md) | `sonarr` | NAS | TV series management, one or more instances |
 | [Radarr](docs/services/radarr.md) | `radarr` | NAS | Movie management, one or more instances |
+| [Plex](docs/services/plex.md) | `plex` | NAS | Media server for the shared libraries, with optional GPU transcoding |
 | [Pi-hole](docs/services/pihole.md) | `pihole` | NAS | LAN ad-blocking DNS that resolves the web services to Caddy's LAN address |
 | [ZNC](docs/services/znc.md) | `znc` | Cloud VM | IRC bouncer with bounded, encrypted playback |
 

@@ -1,0 +1,95 @@
+---
+- name: Validate the Plex configuration
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Inspect the shared data path
+  ansible.builtin.stat:
+    path: "{{ plex_data_path }}"
+  register: plex_data_stat
+
+- name: Require an existing shared data path
+  ansible.builtin.assert:
+    that:
+      - plex_data_stat.stat.exists
+      - plex_data_stat.stat.isdir
+    fail_msg: >-
+      selfhosted_data_path must point to an existing directory;
+      it is never created automatically.
+
+- name: Find the GPU render nodes
+  ansible.builtin.find:
+    paths: /dev/dri
+    patterns: renderD*
+    file_type: any
+  register: plex_render_nodes
+  when: plex_hardware_acceleration == 'dri'
+
+- name: Require a GPU render node
+  ansible.builtin.assert:
+    that:
+      - plex_render_nodes.matched > 0
+    fail_msg: >-
+      plex_hardware_acceleration is dri, but the NAS has no /dev/dri/renderD* device.
+      Load the Intel (i915 or xe) or AMD (amdgpu) kernel driver and its firmware first.
+  when: plex_hardware_acceleration == 'dri'
+
+# Docker's nvidia device driver runs this hook from the NVIDIA Container Toolkit.
+- name: Inspect the NVIDIA Container Toolkit
+  ansible.builtin.stat:
+    path: /usr/bin/nvidia-container-runtime-hook
+  register: plex_nvidia_hook
+  when: plex_hardware_acceleration == 'nvidia'
+
+- name: Require the NVIDIA Container Toolkit
+  ansible.builtin.assert:
+    that:
+      - plex_nvidia_hook.stat.exists
+    fail_msg: >-
+      plex_hardware_acceleration is nvidia, but the NVIDIA Container Toolkit is not
+      installed. Install the NVIDIA driver and the toolkit first; see docs/services/plex.md.
+  when: plex_hardware_acceleration == 'nvidia'
+
+- name: Create the Plex deployment directory
+  ansible.builtin.file:
+    path: "{{ plex_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+# Never recursive: migrated configuration keeps the ownership the operator set.
+- name: Create the Plex configuration directory
+  ansible.builtin.file:
+    path: "{{ plex_directory }}/config"
+    state: directory
+    owner: "{{ plex_uid }}"
+    group: "{{ plex_gid }}"
+    mode: '0700'
+
+- name: Write the Plex Compose project
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ plex_directory }}/compose.yml"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Converge Plex
+  community.docker.docker_compose_v2:
+    project_src: "{{ plex_directory }}"
+    project_name: selfhosted-plex
+    state: present
+    remove_orphans: true
+    wait: true
+    wait_timeout: 180
+  when: not ansible_check_mode
+
+- name: Publish Plex through Caddy
+  ansible.builtin.include_role:
+    name: caddy
+    tasks_from: site
+  vars:
+    caddy_site_name: plex
+    caddy_site_hostname: "{{ plex_hostname }}"
+    caddy_site_upstream: "{{ plex_listen_address }}:{{ plex_port }}"
+  when: not ansible_check_mode

@@ -72,8 +72,8 @@ znc_enabled: false
 ```
 
 The keys are `tailscale`, `caddy`, `thelounge`, `audiobookshelf`,
-`qbittorrent`, `qui`, `autobrr`, `prowlarr`, `sonarr`, `radarr`, `pihole`, and
-`znc`; an unset flag means disabled. Set a flag to `false`
+`qbittorrent`, `qui`, `autobrr`, `prowlarr`, `sonarr`, `radarr`, `plex`,
+`pihole`, and `znc`; an unset flag means disabled. Set a flag to `false`
 to skip the service without changing the playbook. Values must be YAML booleans
 (`true`/`false`), not quoted strings. A service runs on every host whose group
 or host variables enable it, so keep NAS and bouncer selections in their own
@@ -102,7 +102,7 @@ selfhosted_timezone: America/Sao_Paulo
 To override one service, set `<service>_timezone`, for example
 `znc_timezone` in a bouncer's host variables. The setting applies to Caddy,
 The Lounge, Audiobookshelf, qBittorrent, qui, autobrr, Prowlarr, Sonarr,
-Radarr, Pi-hole, and ZNC. Tailscale is excluded because its image
+Radarr, Plex, Pi-hole, and ZNC. Tailscale is excluded because its image
 has no timezone data, so it always logs in UTC. Changing the value recreates
 the affected containers on the next deployment.
 
@@ -126,7 +126,7 @@ make deploy-audiobookshelf
 Each service is its own Ansible role and Docker Compose project under
 `/opt/selfhosted/<service>`. Web services such as The Lounge and
 Audiobookshelf require Caddy to be deployed first; `make deploy` orders this
-automatically. The download and library services share the data layout in
+automatically. The download, library, and streaming services share the data layout in
 [Media stack](media-stack.md). Only `deploy-tailscale` on a host without Tailscale state needs
 to create an enrollment key.
 

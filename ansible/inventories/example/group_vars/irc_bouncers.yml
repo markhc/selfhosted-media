@@ -13,6 +13,7 @@ autobrr_enabled: false
 prowlarr_enabled: false
 sonarr_enabled: false
 radarr_enabled: false
+plex_enabled: false
 pihole_enabled: false
 
 # --- Tailscale (docs/services/tailscale.md) ---

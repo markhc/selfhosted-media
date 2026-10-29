@@ -1,8 +1,8 @@
 ---
 # Sets media_hosts_addresses, the name and loopback address of every media
 # service and instance selected on this host, for example sonarr-anime. Media
-# roles other than qBittorrent render it as extra_hosts so they reach their peers
-# by name on the applications' default ports.
+# roles other than qBittorrent and Plex render it as extra_hosts so they reach their
+# peers by name on the applications' default ports.
 - name: Validate the media service instance lists
   ansible.builtin.assert:
     that:

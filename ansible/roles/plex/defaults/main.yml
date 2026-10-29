@@ -1,0 +1,23 @@
+---
+plex_directory: /opt/selfhosted/plex
+plex_image_repository: ghcr.io/hotio/plex
+plex_image_tag: "release-1.43.5.11079-b3b13e506"
+# Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
+plex_image_digest: ""
+# Container TZ; defaults to the shared selfhosted_timezone, else UTC.
+plex_timezone: "{{ selfhosted_timezone | default('UTC') }}"
+# Plex reads the shared media data root at the same container path as the rest of the stack.
+plex_data_path: "{{ selfhosted_data_path | default('') }}"
+plex_data_container_path: "{{ selfhosted_data_container_path | default('/data') }}"
+# Set to false only if Plex should delete media or store optimized versions next to it.
+plex_data_read_only: true
+plex_uid: "{{ selfhosted_data_uid | default(1000) }}"
+plex_gid: "{{ selfhosted_data_gid | default(1000) }}"
+plex_umask: "{{ selfhosted_data_umask | default('002') }}"
+# Hardware transcoding, which also needs Plex Pass: none; dri for Intel Quick Sync or
+# AMD VA-API through /dev/dri; or nvidia for NVENC/NVDEC through the NVIDIA Container Toolkit.
+plex_hardware_acceleration: none
+# Optional Plex Remote Access: the NAS port that the router forwards from the internet,
+# published on the NAS's LAN address. 0 keeps Plex reachable only through Caddy.
+plex_remote_access_port: 0
+plex_remote_access_address: "{{ caddy_lan_ip | default('') }}"
