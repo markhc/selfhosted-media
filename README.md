@@ -42,8 +42,10 @@ Read [Getting started](docs/getting-started.md) before the first deployment.
 - [Operations](docs/operations.md): disabling services, persistent data,
   backups, and credentials on hosts.
 - [Validation](docs/validation.md): offline checks and container smoke tests.
-- [Media stack](docs/media-stack.md): shared data layout, loopback endpoints,
+- [Media stack](docs/media-stack.md): shared data layout, Docker DNS endpoints,
   and migration for the download, library, and streaming services.
+- [Shared Docker network experiment](docs/shared-network-experiment.md): design,
+  exposure changes, tradeoffs, migration, and rollback.
 
 ## Services
 

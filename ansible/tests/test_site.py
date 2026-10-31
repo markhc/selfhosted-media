@@ -15,6 +15,8 @@ from rolefixture import ROOT, TEMP_ROOT, run_play
 
 PLAY = yaml.safe_load((ROOT / "ansible/playbooks/site.yml").read_text())[0]
 ROLES = {role["role"]: role for role in PLAY["roles"]}
+DOCKER_RUNTIME_TASKS = {task["name"]: task for task in yaml.safe_load(
+    (ROOT / "ansible/roles/docker_runtime/tasks/main.yml").read_text())}
 
 
 def expression(source):
@@ -79,6 +81,13 @@ class SiteSelectionTests(unittest.TestCase):
         self.assertTrue(runtime(selfhosted_selected=["audiobookshelf"], ansible_run_tags=["audiobookshelf"]))
         self.assertFalse(runtime(selfhosted_selected=["audiobookshelf"], ansible_run_tags=["znc"]))
         self.assertFalse(runtime(selfhosted_selected=[], ansible_run_tags=["all"]))
+
+    def test_docker_runtime_creates_the_shared_network(self):
+        network = DOCKER_RUNTIME_TASKS["Create the shared service network"]["community.docker.docker_network"]
+        self.assertEqual(network, {
+            "name": "selfhosted", "driver": "bridge",
+            "ipam_config": [{"subnet": "172.30.0.0/24"}], "state": "present",
+        })
 
     def test_selection_flags_must_be_booleans(self):
         cases = [({"caddy_enabled": True, "znc_enabled": False}, True), ({}, True),

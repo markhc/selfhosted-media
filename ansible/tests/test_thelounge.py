@@ -29,10 +29,10 @@ class TheLoungeTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_private_loopback_behind_reverse_proxy(self):
+    def test_private_shared_network_behind_reverse_proxy(self):
         config = (self.directory / "config.js").read_text()
         self.assertIn("public: false", config)
-        self.assertIn('host: "127.0.0.1"', config)
+        self.assertIn('host: "0.0.0.0"', config)
         self.assertIn("port: 9000", config)
         self.assertIn("reverseProxy: true", config)
 
@@ -40,7 +40,7 @@ class TheLoungeTests(unittest.TestCase):
         compose = yaml.safe_load((self.directory / "compose.yml").read_text())
         self.assertEqual(compose["name"], "selfhosted-thelounge")
         service = compose["services"]["thelounge"]
-        self.assertEqual(service["network_mode"], "host")
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
         self.assertEqual(service["environment"], {"TZ": "UTC"})

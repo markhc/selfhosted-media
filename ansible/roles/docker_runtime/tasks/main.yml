@@ -65,3 +65,11 @@
     name: docker
     enabled: true
     state: started
+
+- name: Create the shared service network
+  community.docker.docker_network:
+    name: selfhosted
+    driver: bridge
+    ipam_config:
+      - subnet: 172.30.0.0/24
+    state: present

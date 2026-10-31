@@ -54,29 +54,28 @@ class ArrChecks:
         path = ROOT / "ansible/roles" / self.APP / "tasks" / name
         return {task["name"]: task for task in yaml.safe_load(path.read_text())}
 
-    def test_instance_is_loopback_only_and_drops_privileges(self):
+    def test_instance_is_shared_network_only_and_drops_privileges(self):
         app, instance = self.APP, self.INSTANCES[1]
         prefix = app.upper() + "__"
         self.assertEqual(self.compose["name"], f"selfhosted-{app}-{instance['name']}")
-        service = self.compose["services"][app]
+        service_name = f"{app}-{instance['name']}"
+        service = self.compose["services"][service_name]
         self.assertEqual(service["image"], self.IMAGE)
-        self.assertEqual(service["network_mode"], "host")
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("ports", service)
         self.assertEqual(service["cap_drop"], ["ALL"])
         self.assertEqual(service["cap_add"], ["CHOWN", "SETGID", "SETUID"])
         self.assertEqual(service["security_opt"], ["no-new-privileges:true"])
         self.assertEqual(service["env_file"], ["./api.env"])
         self.assertEqual(service["environment"], {
-            prefix + "SERVER__BINDADDRESS": instance["address"], prefix + "SERVER__PORT": str(self.PORT),
+            prefix + "SERVER__BINDADDRESS": "0.0.0.0", prefix + "SERVER__PORT": str(self.PORT),
             prefix + "SERVER__ENABLESSL": "false", prefix + "SERVER__URLBASE": "",
             prefix + "SERVER__ALLOWEDHOSTS":
-                f"{instance['hostname']},{app}-{instance['name']},{instance['address']}",
+                f"{instance['hostname']},{app}-{instance['name']}",
             prefix + "AUTH__REQUIRED": "Enabled", prefix + "LOG__LEVEL": "info",
             "PUID": "1000", "PGID": "1000", "UMASK": "002", "TZ": "UTC"})
-        self.assertEqual(service["healthcheck"]["test"][-1], f"http://{instance['address']}:{self.PORT}/ping")
-        peers = {"qbittorrent": "127.10.0.1", "qui": "127.10.0.2",
-                 **{f"{app}-{entry['name']}": entry["address"] for entry in self.INSTANCES}}
-        self.assertEqual(service["extra_hosts"], [f"{name}:{peers[name]}" for name in sorted(peers)])
+        self.assertEqual(service["healthcheck"]["test"][-1], f"http://127.0.0.1:{self.PORT}/ping")
+        self.assertNotIn("extra_hosts", service)
         self.assertEqual(service["volumes"], ["./config:/config", {
             "type": "bind", "source": "/srv/example data/$$data", "target": "/data",
             "bind": {"create_host_path": False}}])
@@ -89,7 +88,8 @@ class ArrChecks:
                     "selfhosted_data_umask": "022", f"{self.APP}_timezone": "America/Sao_Paulo",
                     f"{self.APP}_log_level": "debug"}
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            service = self.render(temp, settings, self.INSTANCES[0])["services"][self.APP]
+            service_name = f"{self.APP}-{self.INSTANCES[0]['name']}"
+            service = self.render(temp, settings, self.INSTANCES[0])["services"][service_name]
         environment = service["environment"]
         self.assertEqual((environment["PUID"], environment["UMASK"], environment["TZ"]),
                          ("1001", "022", "America/Sao_Paulo"))
@@ -108,7 +108,7 @@ class ArrChecks:
         self.assertEqual(publish["vars"], {
             "caddy_site_name": f"{{{{ {app}_instance_name }}}}",
             "caddy_site_hostname": f"{{{{ {app}_instance.hostname }}}}",
-            "caddy_site_upstream": f"{{{{ {app}_instance.address }}}}:{{{{ {app}_port }}}}"})
+            "caddy_site_upstream": f"{{{{ {app}_instance_name }}}}:{{{{ {app}_port }}}}"})
         converge = tasks[f"Converge {{{{ {app}_instance_name }}}}"]["community.docker.docker_compose_v2"]
         self.assertEqual(converge["project_name"], f"selfhosted-{{{{ {app}_instance_name }}}}")
 
@@ -129,12 +129,14 @@ class ArrChecks:
         cases = [
             {"caddy_enabled": False},
             {f"{app}_instances": []},
+            {f"{app}_instances": "instance"},
+            {f"{app}_instances": {"name": "instance"}},
+            {f"{app}_instances": ["instance"]},
+            {f"{app}_instances": [{"hostname": first["hostname"]}]},
             {f"{app}_instances": [{key: value for key, value in first.items() if key != "hostname"}]},
             {f"{app}_instances": [{**first, "hostname": "Not A Hostname"}]},
             {f"{app}_instances": [first, {**instances[1], "hostname": first["hostname"]}]},
-            {f"{app}_instances": [first, {**instances[1], "address": first["address"]}]},
             {f"{app}_instances": [first, {**instances[1], "name": first["name"]}]},
-            {f"{app}_instances": [{**first, "address": "127.0.0.1"}]},
             {f"{app}_instances": [{**first, "name": "Bad_Name"}]},
             {f"{app}_port": 80},
             {f"{app}_log_level": "Info"},
@@ -173,8 +175,8 @@ class SonarrTests(ArrChecks, unittest.TestCase):
     PORT = 8989
     IMAGE = "ghcr.io/hotio/sonarr:release-4.0.20.3014"
     INSTANCES = [
-        {"name": "tv", "address": "127.10.1.1", "hostname": "sonarr.example.com"},
-        {"name": "anime", "address": "127.10.1.2", "hostname": "anime.example.com"},
+        {"name": "tv", "hostname": "sonarr.example.com"},
+        {"name": "anime", "hostname": "anime.example.com"},
     ]
     API_KEYS = {"tv": "0123456789abcdef0123456789abcdef", "anime": "fedcba9876543210fedcba9876543210"}
 

@@ -29,8 +29,7 @@ deploying. The hostname must not be used by another service.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `qui_hostname` | none | HTTPS hostname served by Caddy |
-| `qui_address` | `127.10.0.2` | Loopback address; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
-| `qui_port` | `7476` | Port on that address |
+| `qui_port` | `7476` | Internal port on the shared network |
 | `qui_mounts` | `qbittorrent_mounts` | Additional host directories to mount; see [Filesystem access](#filesystem-access) |
 | `qui_log_level` | `INFO` | `ERROR`, `WARN`, `INFO`, `DEBUG`, or `TRACE` |
 | `qui_image_repository` / `_tag` / `_digest` | official image, pinned | See [Container images](../operations.md#container-images) |
@@ -112,15 +111,15 @@ start and cannot go back, so take a backup first.
 
 ## Network exposure
 
-qui uses host networking without Docker port publishing:
+qui joins the shared bridge without publishing a host port:
 
-- It listens only on `127.10.0.2:7476`. Caddy publishes it at `qui_hostname`
+- It is reachable as `qui:7476`. Caddy publishes it at `qui_hostname`
   on its private listeners; see [Caddy network exposure](caddy.md#network-exposure).
-- It accepts requests only for `qui_hostname`, the `qui` name, and its
-  loopback address (plus `localhost`), which blocks DNS rebinding. Other
+- It accepts requests only for `qui_hostname` and the `qui` name (plus
+  `localhost`), which blocks DNS rebinding. Other
   `Host` headers get HTTP 400.
 - Its session cookie is HTTPS-only, so sign in through the hostname, not the
-  loopback address.
+  internal address.
 - The client proxy under `/proxy/` accepts requests with a valid client key
   only, including through Caddy.
 

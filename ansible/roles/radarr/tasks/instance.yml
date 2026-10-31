@@ -54,5 +54,5 @@
   vars:
     caddy_site_name: "{{ radarr_instance_name }}"
     caddy_site_hostname: "{{ radarr_instance.hostname }}"
-    caddy_site_upstream: "{{ radarr_instance.address }}:{{ radarr_port }}"
+    caddy_site_upstream: "{{ radarr_instance_name }}:{{ radarr_port }}"
   when: not ansible_check_mode

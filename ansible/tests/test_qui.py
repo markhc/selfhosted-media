@@ -39,30 +39,29 @@ class QuiTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_loopback_only_and_unprivileged(self):
+    def test_shared_network_only_and_unprivileged(self):
         self.assertEqual(self.compose["name"], "selfhosted-qui")
         service = self.compose["services"]["qui"]
         self.assertEqual(service["image"], "ghcr.io/autobrr/qui:v1.33.1")
-        self.assertEqual(service["network_mode"], "host")
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
         self.assertTrue(service["read_only"])
         self.assertEqual(service["tmpfs"], ["/tmp"])
         self.assertEqual(service["environment"], {
-            "QUI__HOST": "127.10.0.2", "QUI__PORT": "7476",
-            "QUI__ALLOWED_HOSTS": "qui.example.com,qui,127.10.0.2",
+            "QUI__HOST": "0.0.0.0", "QUI__PORT": "7476",
+            "QUI__ALLOWED_HOSTS": "qui.example.com,qui",
             "QUI__SESSION_COOKIE_SECURE": "true", "QUI__DISABLE_SELF_UPDATE": "true",
             "QUI__LOG_LEVEL": "INFO", "UMASK": "002", "TZ": "UTC"})
-        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.0.2:7476/health")
-        self.assertEqual(service["extra_hosts"], ["qbittorrent:127.10.0.1", "qui:127.10.0.2"])
+        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.0.0.1:7476/health")
+        self.assertNotIn("extra_hosts", service)
 
-    def test_address_can_be_overridden(self):
+    def test_port_can_be_overridden(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            service = render(temp, {**SETTINGS, "qui_address": "127.10.9.9", "qui_port": 7500})
-        self.assertEqual(service["environment"]["QUI__HOST"], "127.10.9.9")
+            service = render(temp, {**SETTINGS, "qui_port": 7500})
+        self.assertEqual(service["environment"]["QUI__HOST"], "0.0.0.0")
         self.assertEqual(service["environment"]["QUI__PORT"], "7500")
-        self.assertEqual(service["environment"]["QUI__ALLOWED_HOSTS"], "qui.example.com,qui,127.10.9.9")
-        self.assertIn("qui:127.10.9.9", service["extra_hosts"])
+        self.assertEqual(service["environment"]["QUI__ALLOWED_HOSTS"], "qui.example.com,qui")
 
     def test_sees_the_same_paths_as_qbittorrent(self):
         volumes = self.compose["services"]["qui"]["volumes"]
@@ -91,7 +90,7 @@ class QuiTests(unittest.TestCase):
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"], {
             "caddy_site_name": "qui", "caddy_site_hostname": "{{ qui_hostname }}",
-            "caddy_site_upstream": "{{ qui_listen_address }}:{{ qui_port }}"})
+            "caddy_site_upstream": "qui:{{ qui_port }}"})
 
     def test_invalid_inputs_fail(self):
         cases = [
@@ -102,7 +101,6 @@ class QuiTests(unittest.TestCase):
             {"qui_uid": 0},
             {"selfhosted_data_umask": 2},
             {"qui_timezone": "../etc/passwd"},
-            {"qui_address": "127.0.0.1"},
         ]
         for path in ("", "relative/path", "/srv/example/", "/srv/../etc", "/", "/opt", "/opt/selfhosted",
                      "/opt/selfhosted/caddy", "/srv/bad\npath"):

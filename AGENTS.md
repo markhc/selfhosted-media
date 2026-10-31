@@ -26,22 +26,21 @@
 
 ## Networking and publication
 
-- Web services bind only to loopback and publish themselves after container convergence through `include_role: caddy` with `tasks_from: site`. Supply `caddy_site_name`, hostname, and a loopback upstream; never hand-write Caddy site blocks or `bind` directives in service roles.
-- Every generated site must import Caddy's `selfhosted_private` snippet. Caddy binds HTTPS only to the discovered Tailscale IP and optional RFC1918 `caddy_lan_ip`; keep automatic HTTP redirects disabled so it never opens wildcard port 80.
+- Web services join the external `selfhosted` bridge and publish themselves after container convergence through `include_role: caddy` with `tasks_from: site`. Supply `caddy_site_name`, hostname, and a Docker DNS upstream; never hand-write Caddy site blocks or `bind` directives in service roles.
+- Every generated site must import Caddy's `selfhosted_private` snippet. Docker publishes Caddy HTTPS only on the discovered Tailscale IP and optional RFC1918 `caddy_lan_ip`; keep automatic HTTP redirects disabled so it never opens port 80.
 - Keep role order `tailscale`, `caddy`, dependent web services, then Pi-hole. Pi-hole must run after all web services because it derives DNS records from Caddy's generated site files.
-- Media services use unique addresses in `127.0.0.0/8` outside `127.0.0.0/16`. `media_hosts` is a helper role, not a service, and is the source of default addresses and peer names; never add a shared media Docker network or modify host `/etc/hosts`.
-- Media peers receive selected names through `extra_hosts`; qBittorrent and Plex intentionally receive none. After adding a media service or instance, run full `make deploy` so existing peers are recreated with the new names.
+- Every application Compose project joins the external `selfhosted` bridge created by `docker_runtime`; use unique service names and Docker DNS for peers. Tailscale remains host-networked because it owns the host TUN interface.
 - Media-handling services mount the existing `selfhosted_data_path` at the same container path and run with the shared UID/GID/umask. Ansible must never create, re-own, migrate, or place that data inside `/opt/selfhosted`.
 
 ## State and service-specific traps
 
 - Treat application databases and UI-managed settings as user state. Roles may enforce documented environment/network/security settings, but must not seed or overwrite existing application state unless the service guide explicitly says so.
-- Sonarr and Radarr remain multi-instance roles: one selection key, an `<app>_instances` list, and one project, data directory, Caddy site, address, API key, and download category per instance.
+- Sonarr and Radarr remain multi-instance roles: one selection key, an `<app>_instances` list, and one project, data directory, Caddy site, Docker DNS name, API key, and download category per instance.
 - qBittorrent rewrites its config. Seed it only when absent, then enforce only documented WebUI/auth keys while stopped: `[Preferences] WebUI\*` before 5.3 and `[WebUI]` from 5.3, removing duplicates from the other section. Only its PBKDF2 password hash reaches the host; preserve the 30-minute stop grace period.
 - qui's `config.toml`, `qui.db`, login, instances, and proxy keys are UI-managed; never seed them because `sessionSecret` encrypts stored credentials. Its mount paths must continue to match qBittorrent's.
-- Sonarr, Radarr, and Prowlarr API keys live only in root-readable `api.env` files. Keep authentication required on loopback—Caddy also connects from loopback—and do not manage their `config.xml`, databases, logins, indexers, or clients.
-- Plex is the media-network exception: it uses its Compose network and publishes 32400 only on its assigned loopback address. Internet Remote Access is opt-in and may bind only an explicit RFC1918 address, never wildcard or Tailscale. Do not set `PLEX_NO_AUTH_NETWORKS`; do not manage its claim, `Preferences.xml`, database, libraries, or users.
-- Pi-hole requires Caddy and `caddy_lan_ip`; DNS binds only to `pihole_dns_address`, while its HTTP UI stays on loopback behind Caddy. Enforce settings through `FTLCONF_*`, pass the UI password as a Compose secret, and do not add `no-new-privileges` because FTL gains file capabilities on exec.
+- Sonarr, Radarr, and Prowlarr API keys live only in root-readable `api.env` files. Keep authentication required on the shared network—Caddy connects through it too—and do not manage their `config.xml`, databases, logins, indexers, or clients.
+- Plex port 32400 stays internal to the shared bridge. Internet Remote Access is opt-in and may bind only an explicit RFC1918 address, never wildcard or Tailscale. Do not set `PLEX_NO_AUTH_NETWORKS`; do not manage its claim, `Preferences.xml`, database, libraries, or users.
+- Pi-hole requires Caddy and `caddy_lan_ip`; Docker publishes DNS only on `pihole_dns_address`, while its HTTP UI stays on the shared bridge behind Caddy. Enforce settings through `FTLCONF_*`, pass the UI password as a Compose secret, and do not add `no-new-privileges` because FTL gains file capabilities on exec.
 - Tailscale enrollment is containerized and stateful. A fresh host gets a short-lived, one-use, non-ephemeral key generated on the controller for exactly `tag:nas` or `tag:irc`; only that key reaches the host and it is cleared after enrollment. Keep Tailscale SSH off and never run native `tailscaled` beside the container.
 - Preserve each Tailscale service tag's self-ownership in `tagOwners`; a multi-tag OAuth client otherwise cannot mint a single-tag key. Never expose API response bodies, tokens, keys, or policy contents in diagnostics.
 - ZNC keeps a read-only managed config plus a writable runtime copy because it locks and rewrites configuration. Preserve bounded buffers, savebuff state/passwords, TLS-only Tailscale binding, and secret redaction; never expose a web or public listener.

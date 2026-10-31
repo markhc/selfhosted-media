@@ -77,9 +77,8 @@ def verify_pbkdf2(value, password):
     return len(salt) == 16 and hashlib.pbkdf2_hmac("sha512", password.encode(), salt, 100000, 64) == key
 
 
-CONVERGE_TASKS = [{"name": "Resolve fixture", "ansible.builtin.include_role": {"name": "media_hosts"}},
-                  {"name": "Converge fixture", "ansible.builtin.import_role": {
-                      "name": "qbittorrent", "tasks_from": "conf"}}]
+CONVERGE_TASKS = [{"name": "Converge fixture", "ansible.builtin.import_role": {
+    "name": "qbittorrent", "tasks_from": "conf"}}]
 
 
 def conf_variables(directory, extra=None):
@@ -105,34 +104,33 @@ class QbittorrentTests(unittest.TestCase):
     def converge_conf(self, directory, extra=None):
         return run_play(directory, conf_variables(directory, extra), CONVERGE_TASKS)
 
-    def test_webui_on_loopback_and_unprivileged(self):
+    def test_webui_on_shared_network_and_peer_ports_published(self):
         self.assertEqual(self.compose["name"], "selfhosted-qbittorrent")
         service = self.compose["services"]["qbittorrent"]
         self.assertEqual(service["image"], "qbittorrentofficial/qbittorrent-nox:5.2.4-1")
-        self.assertEqual(service["network_mode"], "host")
-        self.assertNotIn("ports", service)
+        self.assertEqual(service["networks"], ["selfhosted"])
+        self.assertEqual(service["ports"], ["6881:6881/tcp", "6881:6881/udp"])
         self.assertEqual(service["user"], "1000:1000")
         self.assertTrue(service["read_only"])
         self.assertEqual(service["stop_grace_period"], "30m")
         self.assertEqual(service["environment"], {
             "QBT_LEGAL_NOTICE": "confirm", "QBT_WEBUI_PORT": "8080", "QBT_TORRENTING_PORT": "6881",
             "UMASK": "002", "TZ": "UTC"})
-        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.0.1:8080/")
+        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.0.0.1:8080/")
         self.assertNotIn("extra_hosts", service)
 
-    def test_address_can_be_overridden_and_peers_do_not_change_the_project(self):
-        instances = [{"name": "tv", "address": "127.10.1.1"}, {"name": "anime", "address": "127.10.1.2"}]
+    def test_peer_selection_does_not_change_the_project(self):
+        instances = [{"name": "tv"}, {"name": "anime"}]
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            variables = {**SETTINGS, "sonarr_enabled": True, "sonarr_instances": instances,
-                         "qbittorrent_address": "127.10.9.9"}
+            variables = {**SETTINGS, "sonarr_enabled": True, "sonarr_instances": instances}
             result = run_role("qbittorrent", temp, variables, ("compose.yml", "qBittorrent.conf"))
             self.assertEqual(result.returncode, 0, result.stdout)
             service = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["qbittorrent"]
             # Selecting another media service must not recreate qBittorrent.
             self.assertNotIn("extra_hosts", service)
-            self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.9.9:8080/")
+            self.assertEqual(service["healthcheck"]["test"][-1], "http://127.0.0.1:8080/")
             self.assertEqual(webui_settings((Path(temp) / "qBittorrent.conf").read_text())["Address"],
-                             "127.10.9.9")
+                              "0.0.0.0")
 
     def test_shared_data_root_is_an_existing_bind_mount(self):
         volumes = self.compose["services"]["qbittorrent"]["volumes"]
@@ -170,11 +168,11 @@ class QbittorrentTests(unittest.TestCase):
         self.assertEqual(conf["BitTorrent"]["Session\\DisableAutoTMMByDefault"], "false")
         self.assertFalse(conf.has_section("WebUI"))
         webui = webui_settings(text)
-        self.assertEqual(webui["Address"], "127.10.0.1")
+        self.assertEqual(webui["Address"], "0.0.0.0")
         self.assertEqual(webui["Port"], "8080")
         self.assertEqual(webui["LocalHostAuth"], "true")
         self.assertEqual(webui["AuthSubnetWhitelistEnabled"], "false")
-        self.assertEqual(webui["TrustedReverseProxiesList"], "127.0.0.1")
+        self.assertEqual(webui["TrustedReverseProxiesList"], "172.30.0.2")
         self.assertEqual(webui["Username"], "exampleuser")
         self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
         self.assertNotIn(PASSWORD, (self.directory / "qBittorrent.conf").read_text())
@@ -214,7 +212,7 @@ class QbittorrentTests(unittest.TestCase):
                     self.assertEqual(first_outcomes[index]["failed"], 0, first.stdout)
                     text = (Path(temp) / str(index) / "config/qBittorrent/config/qBittorrent.conf").read_text()
                     webui = webui_settings(text, *current)
-                    self.assertEqual(webui["Address"], "127.10.0.1")
+                    self.assertEqual(webui["Address"], "0.0.0.0")
                     self.assertEqual(webui["LocalHostAuth"], "true")
                     self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
                     self.assertEqual(webui_settings(text, *stale), {})
@@ -232,7 +230,7 @@ class QbittorrentTests(unittest.TestCase):
             text = (Path(temp) / "qBittorrent.conf").read_text()
             self.assertEqual(webui_settings(text), {})
             webui = webui_settings(text, "WebUI", "")
-            self.assertEqual(webui["Address"], "127.10.0.1")
+            self.assertEqual(webui["Address"], "0.0.0.0")
             self.assertTrue(verify_pbkdf2(webui["Password_PBKDF2"], PASSWORD))
 
     def test_new_configuration_is_seeded_once(self):
@@ -261,7 +259,7 @@ class QbittorrentTests(unittest.TestCase):
         publish = tasks["Publish the qBittorrent WebUI through Caddy"]
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"]["caddy_site_upstream"],
-                         "{{ qbittorrent_webui_address }}:{{ qbittorrent_webui_port }}")
+                          "qbittorrent:{{ qbittorrent_webui_port }}")
         self.assertEqual(publish["when"], "not ansible_check_mode")
         # The fallback WebUI needs Caddy and a hostname even when qui is selected.
         without_hostname = {key: value for key, value in SETTINGS.items() if key != "qbittorrent_hostname"}

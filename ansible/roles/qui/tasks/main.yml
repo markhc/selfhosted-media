@@ -78,5 +78,5 @@
   vars:
     caddy_site_name: qui
     caddy_site_hostname: "{{ qui_hostname }}"
-    caddy_site_upstream: "{{ qui_listen_address }}:{{ qui_port }}"
+    caddy_site_upstream: "qui:{{ qui_port }}"
   when: not ansible_check_mode

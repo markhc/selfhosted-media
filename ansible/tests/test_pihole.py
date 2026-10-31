@@ -43,23 +43,23 @@ class PiholeTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_dns_on_the_lan_address_and_web_interface_on_loopback(self):
+    def test_dns_on_the_lan_address_and_web_interface_on_shared_network(self):
         self.assertEqual(self.compose["name"], "selfhosted-pihole")
         service = self.compose["services"]["pihole"]
         self.assertEqual(service["image"], "pihole/pihole:2026.10.0")
-        self.assertEqual(service["network_mode"], "host")
-        self.assertNotIn("ports", service)
+        self.assertEqual(service["networks"], ["selfhosted"])
+        self.assertEqual(service["ports"], ["192.168.50.10:53:53/tcp", "192.168.50.10:53:53/udp"])
         environment = service["environment"]
-        self.assertEqual(environment["FTLCONF_dns_listeningMode"], "NONE")
-        self.assertEqual(environment["FTLCONF_misc_dnsmasq_lines"], "listen-address=192.168.50.10;bind-dynamic")
+        self.assertEqual(environment["FTLCONF_dns_listeningMode"], "ALL")
+        self.assertNotIn("FTLCONF_misc_dnsmasq_lines", environment)
         self.assertEqual(environment["FTLCONF_dns_upstreams"], "1.1.1.1;1.0.0.1")
-        self.assertEqual(environment["FTLCONF_webserver_port"], "127.0.0.1:8053")
+        self.assertEqual(environment["FTLCONF_webserver_port"], "0.0.0.0:8053")
         self.assertEqual(environment["FTLCONF_webserver_domain"], "pihole.example.com")
         for key in ("FTLCONF_ntp_ipv4_active", "FTLCONF_ntp_ipv6_active", "FTLCONF_ntp_sync_active"):
             self.assertEqual(environment[key], "false")
         self.assertEqual((environment["PIHOLE_UID"], environment["PIHOLE_GID"], environment["TZ"]),
                          ("1000", "1000", "UTC"))
-        self.assertEqual(service["healthcheck"]["test"][-2:], ["@192.168.50.10", "pi.hole"])
+        self.assertEqual(service["healthcheck"]["test"][-2:], ["@127.0.0.1", "pi.hole"])
         self.assertEqual(service["volumes"], ["./etc-pihole:/etc/pihole"])
 
     def test_capabilities_are_limited_to_the_start_script_and_dns(self):
@@ -78,8 +78,9 @@ class PiholeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
             result = run_role("pihole", temp, settings, ("compose.yml",))
             self.assertEqual(result.returncode, 0, result.stdout)
-            environment = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["pihole"]["environment"]
-        self.assertEqual(environment["FTLCONF_misc_dnsmasq_lines"], "listen-address=192.168.50.11;bind-dynamic")
+            service = yaml.safe_load((Path(temp) / "compose.yml").read_text())["services"]["pihole"]
+            environment = service["environment"]
+        self.assertEqual(service["ports"], ["192.168.50.11:53:53/tcp", "192.168.50.11:53:53/udp"])
         self.assertEqual(environment["FTLCONF_dns_upstreams"], "9.9.9.9;::1#5335")
         self.assertTrue(environment["FTLCONF_dns_hostRecord"].endswith(",192.168.50.10"))
 
@@ -118,7 +119,7 @@ class PiholeTests(unittest.TestCase):
         publish = tasks("main.yml")["Publish Pi-hole through Caddy"]
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"], {"caddy_site_name": "pihole", "caddy_site_hostname": "{{ pihole_hostname }}",
-                                           "caddy_site_upstream": "127.0.0.1:{{ pihole_port }}"})
+                                           "caddy_site_upstream": "pihole:{{ pihole_port }}"})
 
     def test_invalid_inputs_fail(self):
         cases = [

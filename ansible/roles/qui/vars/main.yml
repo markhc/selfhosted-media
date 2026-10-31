@@ -4,12 +4,11 @@ qui_image: >-
   {{ qui_image_repository
   | container_image(qui_image_tag, qui_image_digest) }}
 
-# qui binds to the loopback address that the media_hosts role assigns.
-qui_listen_address: "{{ media_hosts_addresses.qui }}"
+# qui binds inside the container and is not published on the host.
+qui_listen_address: 0.0.0.0
 
 # Host headers qui accepts besides its built-in localhost names: Caddy passes the
 # public hostname, and media services connect by name or address.
 qui_allowed_hosts:
   - "{{ qui_hostname }}"
   - qui
-  - "{{ qui_listen_address }}"

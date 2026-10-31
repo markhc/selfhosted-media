@@ -9,8 +9,7 @@ sonarr_instance_name: sonarr-{{ sonarr_instance.name }}
 sonarr_instance_directory: "{{ sonarr_deployment_root }}/{{ sonarr_instance_name }}"
 
 # Host headers Sonarr accepts besides its built-in localhost names: Caddy passes the
-# public hostname, and media services connect by name or address.
+# public hostname, and media services connect by Docker DNS name.
 sonarr_allowed_hosts:
   - "{{ sonarr_instance.hostname }}"
   - "{{ sonarr_instance_name }}"
-  - "{{ sonarr_instance.address }}"

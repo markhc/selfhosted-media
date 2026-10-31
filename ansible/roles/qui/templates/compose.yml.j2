@@ -1,19 +1,15 @@
-# Managed by Ansible. qui listens on its own loopback address only, behind Caddy.
+# Managed by Ansible. qui is reachable only through the shared network.
 name: selfhosted-qui
 services:
   qui:
     image: {{ qui_image }}
-    network_mode: host
+    networks:
+      - selfhosted
     restart: unless-stopped
     user: "{{ qui_uid }}:{{ qui_gid }}"
     read_only: true
     tmpfs:
       - /tmp
-    # Peers in the media stack, by name.
-    extra_hosts:
-{% for name, address in media_hosts_addresses | dictsort %}
-      - "{{ name }}:{{ address }}"
-{% endfor %}
     environment:
       QUI__HOST: "{{ qui_listen_address }}"
       QUI__PORT: "{{ qui_port }}"
@@ -35,7 +31,7 @@ services:
         - "5"
         - --output
         - /dev/null
-        - http://{{ qui_listen_address }}:{{ qui_port }}/health
+        - http://127.0.0.1:{{ qui_port }}/health
       interval: 10s
       timeout: 10s
       retries: 6
@@ -55,3 +51,7 @@ services:
         bind:
           create_host_path: false
 {% endfor %}
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

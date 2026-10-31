@@ -6,7 +6,8 @@
 
 # Every service site imports this: private listeners and DNS-01 certificates only.
 (selfhosted_private) {
-	bind {{ caddy_tailscale_ip.stdout | trim }}{{ (' ' ~ caddy_lan_ip) if caddy_lan_ip else '' }}
+	# Docker publishes this listener only on the selected Tailscale and LAN addresses.
+	bind 0.0.0.0
 	tls {
 		ca {{ caddy_acme_ca }}
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}

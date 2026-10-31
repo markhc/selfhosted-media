@@ -15,7 +15,7 @@ SETTINGS = {
     "qui_enabled": True,
     "prowlarr_enabled": True,
     "sonarr_enabled": True,
-    "sonarr_instances": [{"name": "tv", "address": "127.10.1.1", "hostname": "sonarr.example.com"}],
+    "sonarr_instances": [{"name": "tv", "hostname": "sonarr.example.com"}],
     "prowlarr_hostname": "prowlarr.example.com",
     "prowlarr_api_key": API_KEY,
 }
@@ -47,49 +47,47 @@ class ProwlarrTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_loopback_only_and_drops_privileges(self):
+    def test_shared_network_only_and_drops_privileges(self):
         self.assertEqual(self.compose["name"], "selfhosted-prowlarr")
         service = self.compose["services"]["prowlarr"]
         self.assertEqual(service["image"], "ghcr.io/hotio/prowlarr:release-2.6.5.5623")
-        self.assertEqual(service["network_mode"], "host")
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("ports", service)
         self.assertEqual(service["cap_drop"], ["ALL"])
         self.assertEqual(service["cap_add"], ["CHOWN", "SETGID", "SETUID"])
         self.assertEqual(service["security_opt"], ["no-new-privileges:true"])
         self.assertEqual(service["env_file"], ["./api.env"])
         self.assertEqual(service["environment"], {
-            "PROWLARR__SERVER__BINDADDRESS": "127.10.0.3", "PROWLARR__SERVER__PORT": "9696",
+            "PROWLARR__SERVER__BINDADDRESS": "0.0.0.0", "PROWLARR__SERVER__PORT": "9696",
             "PROWLARR__SERVER__ENABLESSL": "false", "PROWLARR__SERVER__URLBASE": "",
-            "PROWLARR__SERVER__ALLOWEDHOSTS": "prowlarr.example.com,prowlarr,127.10.0.3",
+            "PROWLARR__SERVER__ALLOWEDHOSTS": "prowlarr.example.com,prowlarr",
             "PROWLARR__AUTH__REQUIRED": "Enabled", "PROWLARR__LOG__LEVEL": "info",
             "PUID": "1000", "PGID": "1000", "TZ": "UTC"})
-        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.0.3:9696/ping")
-        self.assertEqual(service["extra_hosts"],
-                         ["prowlarr:127.10.0.3", "qui:127.10.0.2", "sonarr-tv:127.10.1.1"])
+        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.0.0.1:9696/ping")
+        self.assertNotIn("extra_hosts", service)
         # Prowlarr handles no media files.
         self.assertEqual(service["volumes"], ["./config:/config"])
         self.assertNotIn(API_KEY, (self.directory / "compose.yml").read_text())
 
     def test_settings_can_be_overridden(self):
-        settings = {**SETTINGS, "prowlarr_address": "127.10.9.9", "prowlarr_port": 9700, "selfhosted_data_uid": 1001,
+        settings = {**SETTINGS, "prowlarr_port": 9700, "selfhosted_data_uid": 1001,
                     "prowlarr_timezone": "America/Sao_Paulo", "prowlarr_log_level": "debug"}
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
             service = render(temp, settings)
         environment = service["environment"]
-        self.assertEqual(environment["PROWLARR__SERVER__BINDADDRESS"], "127.10.9.9")
+        self.assertEqual(environment["PROWLARR__SERVER__BINDADDRESS"], "0.0.0.0")
         self.assertEqual(environment["PROWLARR__SERVER__PORT"], "9700")
-        self.assertEqual(environment["PROWLARR__SERVER__ALLOWEDHOSTS"], "prowlarr.example.com,prowlarr,127.10.9.9")
+        self.assertEqual(environment["PROWLARR__SERVER__ALLOWEDHOSTS"], "prowlarr.example.com,prowlarr")
         self.assertEqual((environment["PUID"], environment["TZ"], environment["PROWLARR__LOG__LEVEL"]),
                          ("1001", "America/Sao_Paulo", "debug"))
-        self.assertIn("prowlarr:127.10.9.9", service["extra_hosts"])
-        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.10.9.9:9700/ping")
+        self.assertEqual(service["healthcheck"]["test"][-1], "http://127.0.0.1:9700/ping")
 
     def test_published_through_caddy(self):
         publish = tasks()["Publish Prowlarr through Caddy"]
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"], {
             "caddy_site_name": "prowlarr", "caddy_site_hostname": "{{ prowlarr_hostname }}",
-            "caddy_site_upstream": "{{ prowlarr_listen_address }}:{{ prowlarr_port }}"})
+            "caddy_site_upstream": "prowlarr:{{ prowlarr_port }}"})
 
     def test_api_key_is_kept_out_of_logs_and_diffs(self):
         role_tasks = tasks()
@@ -109,8 +107,6 @@ class ProwlarrTests(unittest.TestCase):
             {"prowlarr_uid": 0},
             {"prowlarr_timezone": "../etc/passwd"},
             {"prowlarr_directory": "relative/path"},
-            {"prowlarr_address": "127.0.0.1"},
-            {"prowlarr_address": "127.10.1.1"},
         ]
         assert_cases_fail_validation(self, self.directory, SETTINGS, cases, [validate_task("prowlarr")])
 

@@ -5,7 +5,7 @@ radarr_image_repository: ghcr.io/hotio/radarr
 radarr_image_tag: "release-6.4.4.10685"
 # Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
 radarr_image_digest: ""
-# Every instance listens on this port at its own loopback address.
+# Every instance listens on this port on the shared Docker network.
 radarr_port: 7878
 # info, debug, or trace.
 radarr_log_level: info
@@ -17,6 +17,6 @@ radarr_data_container_path: "{{ selfhosted_data_container_path | default('/data'
 radarr_uid: "{{ selfhosted_data_uid | default(1000) }}"
 radarr_gid: "{{ selfhosted_data_gid | default(1000) }}"
 radarr_umask: "{{ selfhosted_data_umask | default('002') }}"
-# Each instance needs a name, a loopback address, and a hostname, plus an API key in the
+# Each instance needs a name and a hostname, plus an API key in the
 # vaulted radarr_api_keys map under the same name.
 radarr_instances: []

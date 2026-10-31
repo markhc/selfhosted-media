@@ -84,13 +84,12 @@ upgrade, change `pihole_image_tag` to a newer release and redeploy; see
 
 ## Network exposure
 
-Pi-hole uses host networking without Docker port publishing:
+Pi-hole joins the shared bridge and publishes only DNS:
 
-- DNS on UDP/TCP 53 binds only to `pihole_dns_address`, never to the
-  Tailscale, Docker, or loopback interfaces, so it does not collide with
-  systemd-resolved. Pi-hole starts even if the LAN address is not up yet and
-  binds it when it appears.
-- The web interface listens on `127.0.0.1:8053` over plain HTTP, without
+- Docker publishes UDP/TCP 53 only on `pihole_dns_address`, never on the
+  Tailscale address or wildcard host interfaces, so it does not collide with
+  systemd-resolved's loopback listener.
+- The web interface listens on port `8053` inside the bridge over plain HTTP, without
   Pi-hole's own HTTPS listener; Caddy is the only listener reachable from the
   tailnet or LAN. See [Caddy network exposure](caddy.md#network-exposure).
 - Pi-hole's NTP server and clock synchronization are disabled, and DHCP stays

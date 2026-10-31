@@ -10,48 +10,28 @@ selectable service with its own role; Sonarr and Radarr also run as
 [several instances](#multiple-instances). This guide covers only what they
 share.
 
-## Names and loopback addresses
+## Names on the shared network
 
-Every service in the stack runs on the NAS with host networking, except Plex.
-Instead of sharing `127.0.0.1`, each service and instance listens on its own
-address in the loopback range on the application's default port, and the media
-containers resolve each other by name. Services therefore reach each other at
-addresses such as `http://sonarr-anime:8989`. There is no shared Docker
-network, and only Caddy, qBittorrent's peer port, and Plex's optional
-[remote access](services/plex.md#remote-access) port listen beyond loopback,
-so all of them must be selected on the same host.
+Every application container joins the external `selfhosted` Docker bridge.
+Docker DNS makes services reachable by name on their normal internal ports,
+for example `http://sonarr-anime:8989`. Caddy uses the same names as its
+upstreams. The web ports are not published on the host.
 
-| Name | Default address | Port | Published through Caddy |
-| --- | --- | --- | --- |
-| `qbittorrent` ([guide](services/qbittorrent.md)) | `127.10.0.1` | `8080` | Yes, also as a fallback next to qui |
-| `qui` ([guide](services/qui.md)) | `127.10.0.2` | `7476` | Yes |
-| `prowlarr` ([guide](services/prowlarr.md)) | `127.10.0.3` | `9696` | Yes |
-| `autobrr` ([guide](services/autobrr.md)) | `127.10.0.4` | `7474` | Yes |
-| `sonarr-<instance>` ([guide](services/sonarr.md)) | per instance, e.g. `127.10.1.1` | `8989` | Yes, one hostname each |
-| `radarr-<instance>` ([guide](services/radarr.md)) | per instance, e.g. `127.10.2.1` | `7878` | Yes, one hostname each |
-| `plex` ([guide](services/plex.md)) | `127.10.0.5` | `32400` | Yes |
+| Name | Port | Published through Caddy |
+| --- | --- | --- |
+| `qbittorrent` ([guide](services/qbittorrent.md)) | `8080` | Yes, also as a fallback next to qui |
+| `qui` ([guide](services/qui.md)) | `7476` | Yes |
+| `prowlarr` ([guide](services/prowlarr.md)) | `9696` | Yes |
+| `autobrr` ([guide](services/autobrr.md)) | `7474` | Yes |
+| `sonarr-<instance>` ([guide](services/sonarr.md)) | `8989` | Yes, one hostname each |
+| `radarr-<instance>` ([guide](services/radarr.md)) | `7878` | Yes, one hostname each |
+| `plex` ([guide](services/plex.md)) | `32400` | Yes |
 
-- Override a single-instance service's address with `<service>_address`, for
-  example `qbittorrent_address` or `prowlarr_address`. Sonarr and Radarr
-  instances set `address` in their [instance list](#multiple-instances).
-- Every address must be unique and in `127.0.0.0/8` outside `127.0.0.0/16`,
-  which holds `127.0.0.1`, systemd-resolved's `127.0.0.53`, and Debian's
-  `127.0.1.1` hostname entry. Linux routes the whole range to the loopback
-  interface, so no host configuration is needed.
-- Each media container gets the names of the media services and instances
-  selected on its host as `extra_hosts`; the host's own `/etc/hosts` is not
-  changed. A container learns new names only when it is recreated, so after
-  adding a service or instance run `make deploy` rather than only
-  `make deploy-<service>`.
-- qBittorrent is the exception: it only accepts connections from the others,
-  so it gets no `extra_hosts`. Adding a service or instance therefore never
-  recreates it, which would stop it and reload every torrent. Its "Run external
-  program" commands must use peer addresses rather than names.
-- Plex cannot choose its listening address, so it runs in its own Compose
-  network and Docker publishes its port only on its loopback address; see
-  [Plex network exposure](services/plex.md#network-exposure). It never connects
-  to the others, so it gets no `extra_hosts` either.
-- Caddy proxies each published web UI at the same address and port.
+Only ports that must accept host traffic are published: Caddy HTTPS,
+qBittorrent TCP/UDP peer traffic, Pi-hole DNS, ZNC IRC, and optional Plex
+[remote access](services/plex.md#remote-access). Tailscale remains in host mode
+because it owns the host TUN interface. See the
+[shared-network evaluation](shared-network-experiment.md) for the tradeoffs.
 
 ## Multiple instances
 
@@ -74,10 +54,8 @@ The roles follow these rules:
   ```yaml
   sonarr_instances:
     - name: tv
-      address: 127.10.1.1
       hostname: sonarr.example.com
     - name: anime
-      address: 127.10.1.2
       hostname: anime.example.com
   ```
 

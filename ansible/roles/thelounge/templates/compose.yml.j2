@@ -1,9 +1,10 @@
-# Managed by Ansible. The Lounge listens on loopback only, behind Caddy.
+# Managed by Ansible. The Lounge is reachable only through the shared network.
 name: selfhosted-thelounge
 services:
   thelounge:
     image: {{ thelounge_image }}
-    network_mode: host
+    networks:
+      - selfhosted
     restart: unless-stopped
     user: "1000:1000"
     environment:
@@ -23,3 +24,7 @@ services:
       start_period: 20s
     volumes:
       - ./data:/var/opt/thelounge
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

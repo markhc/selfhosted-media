@@ -4,5 +4,5 @@ autobrr_image: >-
   {{ autobrr_image_repository
   | container_image(autobrr_image_tag, autobrr_image_digest) }}
 
-# autobrr binds to the loopback address that the media_hosts role assigns.
-autobrr_listen_address: "{{ media_hosts_addresses.autobrr }}"
+# autobrr binds inside the container and is not published on the host.
+autobrr_listen_address: 0.0.0.0

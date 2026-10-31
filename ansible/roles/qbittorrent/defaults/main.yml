@@ -5,7 +5,7 @@ qbittorrent_image_tag: "5.2.4-1"
 # Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
 qbittorrent_image_digest: ""
 qbittorrent_webui_port: 8080
-# Peer traffic listens on every interface; forward it on the router for incoming peers.
+# Peer traffic is published on every host interface; forward it on the router for incoming peers.
 qbittorrent_torrenting_port: 6881
 # Container TZ; defaults to the shared selfhosted_timezone, else UTC.
 qbittorrent_timezone: "{{ selfhosted_timezone | default('UTC') }}"

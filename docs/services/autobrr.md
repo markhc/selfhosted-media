@@ -4,7 +4,7 @@
 channels and feeds, filters releases, and sends matches to download clients or
 Arr applications. It runs on the NAS with the official image, behind
 [Caddy](caddy.md), and reaches the other services by their
-[media-stack names](../media-stack.md#names-and-loopback-addresses).
+[media-stack names](../media-stack.md#names-on-the-shared-network).
 
 ## Enable
 
@@ -25,8 +25,7 @@ deploying. The hostname must not be used by another service.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `autobrr_hostname` | none | HTTPS hostname served by Caddy |
-| `autobrr_address` | `127.10.0.4` | Loopback address; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
-| `autobrr_port` | `7474` | Port on that address |
+| `autobrr_port` | `7474` | Internal port on the shared network |
 | `autobrr_log_level` | `INFO` | `ERROR`, `WARN`, `INFO`, `DEBUG`, or `TRACE` |
 | `autobrr_image_repository` / `_tag` / `_digest` | official image, pinned | See [Container images](../operations.md#container-images) |
 
@@ -97,14 +96,13 @@ directory before upgrading and do not downgrade after a database migration.
 
 ## Network exposure
 
-autobrr uses host networking without Docker port publishing:
+autobrr joins the shared bridge without publishing a host port:
 
-- It listens only on `127.10.0.4:7474` by default. Caddy publishes it at
+- It is reachable as `autobrr:7474`. Caddy publishes it at
   `autobrr_hostname` on its private listeners; see
   [Caddy network exposure](caddy.md#network-exposure).
 - Browser API requests are restricted to the HTTPS hostname by CORS.
-- The container receives the selected media services as local host entries, so
-  it can connect to them without exposing their loopback listeners.
+- Docker DNS resolves the selected media services without publishing their web ports.
 - Tracker IRC and feed connections, notifications, and remote actions are
   outbound connections from the NAS.
 

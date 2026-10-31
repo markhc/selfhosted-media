@@ -47,10 +47,10 @@ class AcmeTests(unittest.TestCase):
         config = (self.directory / "znc.conf").read_text()
         self.assertIn("SSLCertFile = /znc-tls/acme.pem", config)
         self.assertIn("SSLKeyFile = /znc-tls/acme.pem", config)
-        self.assertIn("Host = 100.100.100.100", config)
+        self.assertIn("Host = 0.0.0.0", config)
         service = yaml.safe_load((self.directory / "compose.yml").read_text())["services"]["znc"]
-        self.assertEqual(service["network_mode"], "host")
-        self.assertNotIn("ports", service)
+        self.assertEqual(service["networks"], ["selfhosted"])
+        self.assertEqual(service["ports"], ["100.100.100.100:6697:6697"])
         self.assertEqual(service["environment"], {"TZ": "UTC"})
         self.assertNotIn("acme/", str(service["volumes"]))
         check = service["healthcheck"]["test"][1]

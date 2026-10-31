@@ -16,7 +16,7 @@ SETTINGS = {
     "caddy_tailscale_ip": {"stdout": "100.100.100.100\n"},
     "caddy_site_name": "example",
     "caddy_site_hostname": "app.example.com",
-    "caddy_site_upstream": "127.0.0.1:8080",
+    "caddy_site_upstream": "example:8080",
 }
 
 
@@ -38,24 +38,24 @@ class CaddyTests(unittest.TestCase):
         self.assertIn("auto_https disable_redirects", caddyfile)
         self.assertIn("admin localhost:2019", caddyfile)
         self.assertIn("(selfhosted_private) {", caddyfile)
-        self.assertIn("bind 100.100.100.100 192.168.50.10", caddyfile)
+        self.assertIn("bind 0.0.0.0", caddyfile)
         self.assertIn("dns cloudflare {env.CLOUDFLARE_API_TOKEN}", caddyfile)
         self.assertTrue(caddyfile.rstrip().endswith("import sites/*.caddy"))
         self.assertNotIn(TOKEN, caddyfile)
 
-    def test_site_imports_private_listener_and_proxies_to_loopback(self):
+    def test_site_imports_private_listener_and_proxies_over_docker_dns(self):
         site = (self.directory / "site.caddy").read_text()
         self.assertIn("https://app.example.com {", site)
         self.assertIn("import selfhosted_private", site)
-        self.assertIn("reverse_proxy 127.0.0.1:8080", site)
+        self.assertIn("reverse_proxy example:8080", site)
         self.assertNotIn("bind", site)
 
-    def test_compose_has_no_published_ports_or_secrets(self):
+    def test_compose_publishes_only_private_https_and_has_no_secrets(self):
         compose = yaml.safe_load((self.directory / "compose.yml").read_text())
         self.assertEqual(compose["name"], "selfhosted-caddy")
         service = compose["services"]["caddy"]
-        self.assertEqual(service["network_mode"], "host")
-        self.assertNotIn("ports", service)
+        self.assertEqual(service["ports"], ["100.100.100.100:443:443", "192.168.50.10:443:443"])
+        self.assertEqual(service["networks"], {"selfhosted": {"ipv4_address": "172.30.0.2"}})
         self.assertEqual(service["build"], {"context": "./build"})
         self.assertIn("./conf:/etc/caddy:ro", service["volumes"])
         self.assertEqual(service["environment"], {"TZ": "UTC"})
@@ -78,12 +78,12 @@ class CaddyTests(unittest.TestCase):
 
     def test_invalid_sites_are_rejected(self):
         validation = yaml.safe_load((ROOT / "ansible/roles/caddy/tasks/site.yml").read_text())[0]
-        result = run_play(self.directory, {**SETTINGS, "caddy_site_upstream": "127.10.1.2:8989"}, [validation])
+        result = run_play(self.directory, {**SETTINGS, "caddy_site_upstream": "sonarr-tv:8989"}, [validation])
         self.assertEqual(result.returncode, 0, result.stdout)
         for extra in ({"caddy_site_name": "Bad Name"}, {"caddy_site_hostname": "not a hostname"},
-                      {"caddy_site_upstream": "0.0.0.0:8080"}, {"caddy_site_upstream": "192.168.1.5:8080"},
-                      {"caddy_site_upstream": "127.256.0.1:8080"}, {"caddy_site_upstream": "127.0.0.01:8080"},
-                      {"caddy_site_upstream": "127.0.0.1:8080/x"}):
+                      {"caddy_site_upstream": "0.0.0.0:8080"}, {"caddy_site_upstream": "Bad_Name:8080"},
+                      {"caddy_site_upstream": "-service:8080"}, {"caddy_site_upstream": "service:0"},
+                      {"caddy_site_upstream": "service:65536"}, {"caddy_site_upstream": "service:8080/path"}):
             with self.subTest(extra=extra):
                 result = run_play(self.directory, {**SETTINGS, **extra}, [validation])
                 self.assertNotEqual(result.returncode, 0, result.stdout)

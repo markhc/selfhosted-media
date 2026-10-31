@@ -1,9 +1,4 @@
 ---
-# Also validates each instance's name and unique loopback address.
-- name: Resolve the media service addresses
-  ansible.builtin.include_role:
-    name: media_hosts
-
 - name: Validate the Sonarr configuration
   ansible.builtin.assert:
     that:
@@ -48,13 +43,20 @@
 - name: Validate the Sonarr instances
   ansible.builtin.assert:
     that:
+      - sonarr_instances is sequence
+      - sonarr_instances is not string
+      - sonarr_instances is not mapping
       - sonarr_instances | length > 0
+      - sonarr_instances | select('mapping') | list | length == sonarr_instances | length
+      - sonarr_instances | map(attribute='name', default='')
+        | select('match', '^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$') | unique | list | length
+        == sonarr_instances | length
       - sonarr_instances | map(attribute='hostname', default='')
         | select('match', '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$') | unique | list | length
         == sonarr_instances | length
     fail_msg: >-
-      Set sonarr_instances to at least one instance, each with a unique hostname in a
-      DNS zone you control.
+      Set sonarr_instances to at least one instance, each with a unique lowercase name
+      and a unique hostname in a DNS zone you control.
 
 - name: Validate the Sonarr API keys
   ansible.builtin.assert:

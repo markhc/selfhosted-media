@@ -28,7 +28,6 @@ deploying. The hostname must not be used by another service.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `plex_hostname` | none | HTTPS hostname served by Caddy and advertised to Plex clients |
-| `plex_address` | `127.10.0.5` | Loopback address of port `32400`; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
 | `plex_hardware_acceleration` | `none` | `none`, `dri`, or `nvidia`; see [Hardware transcoding](#hardware-transcoding) |
 | `plex_data_read_only` | `true` | Mount the shared data root read-only |
 | `plex_remote_access_port` | `0` (off) | NAS port the router forwards for [remote access](#remote-access) |
@@ -224,14 +223,12 @@ first.
 
 ## Network exposure
 
-Plex cannot choose the address it listens on, so unlike the rest of the media
-stack it does not use host networking:
+Plex joins the shared bridge:
 
-- It runs in the Compose project's own network, `selfhosted-plex_default`, and
-  Docker publishes port `32400` only on `plex_address`. Caddy publishes it at
+- Port `32400` is not published on the host. Caddy reaches `plex:32400` and publishes it at
   `plex_hostname` on its private listeners; see
   [Caddy network exposure](caddy.md#network-exposure).
-- With [remote access](#remote-access), Docker also publishes it on
+- With [remote access](#remote-access), Docker publishes it on
   `plex_remote_access_address` at `plex_remote_access_port`, which the router
   forwards from the internet. Docker's published ports bypass host firewalls
   such as `ufw`.

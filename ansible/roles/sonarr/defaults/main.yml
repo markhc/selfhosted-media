@@ -5,7 +5,7 @@ sonarr_image_repository: ghcr.io/hotio/sonarr
 sonarr_image_tag: "release-4.0.20.3014"
 # Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
 sonarr_image_digest: ""
-# Every instance listens on this port at its own loopback address.
+# Every instance listens on this port on the shared Docker network.
 sonarr_port: 8989
 # info, debug, or trace.
 sonarr_log_level: info
@@ -17,6 +17,6 @@ sonarr_data_container_path: "{{ selfhosted_data_container_path | default('/data'
 sonarr_uid: "{{ selfhosted_data_uid | default(1000) }}"
 sonarr_gid: "{{ selfhosted_data_gid | default(1000) }}"
 sonarr_umask: "{{ selfhosted_data_umask | default('002') }}"
-# Each instance needs a name, a loopback address, and a hostname, plus an API key in the
+# Each instance needs a name and a hostname, plus an API key in the
 # vaulted sonarr_api_keys map under the same name.
 sonarr_instances: []

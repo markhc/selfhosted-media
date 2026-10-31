@@ -1,9 +1,13 @@
-# Managed by Ansible. The WebUI listens on its own loopback address; peer traffic uses the host network.
+# Managed by Ansible. The WebUI stays on the shared network; only peer traffic is published.
 name: selfhosted-qbittorrent
 services:
   qbittorrent:
     image: {{ qbittorrent_image }}
-    network_mode: host
+    networks:
+      - selfhosted
+    ports:
+      - "{{ qbittorrent_torrenting_port }}:{{ qbittorrent_torrenting_port }}/tcp"
+      - "{{ qbittorrent_torrenting_port }}:{{ qbittorrent_torrenting_port }}/udp"
     restart: unless-stopped
     user: "{{ qbittorrent_uid }}:{{ qbittorrent_gid }}"
     read_only: true
@@ -11,8 +15,6 @@ services:
       - /tmp
     # The default 10 seconds can interrupt qBittorrent saving its resume data.
     stop_grace_period: 30m
-    # No extra_hosts: qBittorrent never connects to its peers, and a changed peer list
-    # would recreate the container and reload every torrent.
     environment:
       QBT_LEGAL_NOTICE: confirm
       QBT_WEBUI_PORT: "{{ qbittorrent_webui_port }}"
@@ -29,7 +31,7 @@ services:
         - "5"
         - --output
         - /dev/null
-        - http://{{ qbittorrent_webui_address }}:{{ qbittorrent_webui_port }}/
+        - http://127.0.0.1:{{ qbittorrent_webui_port }}/
       interval: 10s
       timeout: 10s
       retries: 6
@@ -49,3 +51,7 @@ services:
         bind:
           create_host_path: false
 {% endfor %}
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

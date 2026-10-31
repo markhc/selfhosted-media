@@ -1,13 +1,14 @@
-# Managed by Ansible. Audiobookshelf listens on loopback only, behind Caddy.
+# Managed by Ansible. Audiobookshelf is reachable only through the shared network.
 name: selfhosted-audiobookshelf
 services:
   audiobookshelf:
     image: {{ audiobookshelf_image }}
-    network_mode: host
+    networks:
+      - selfhosted
     restart: unless-stopped
     user: "{{ audiobookshelf_uid }}:{{ audiobookshelf_gid }}"
     environment:
-      HOST: 127.0.0.1
+      HOST: 0.0.0.0
       PORT: "{{ audiobookshelf_port }}"
       TZ: {{ audiobookshelf_timezone | to_json }}
     healthcheck:
@@ -34,3 +35,7 @@ services:
         bind:
           create_host_path: false
 {% endfor %}
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

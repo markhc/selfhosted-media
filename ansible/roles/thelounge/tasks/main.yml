@@ -53,5 +53,5 @@
   vars:
     caddy_site_name: thelounge
     caddy_site_hostname: "{{ thelounge_hostname }}"
-    caddy_site_upstream: "127.0.0.1:{{ thelounge_port }}"
+    caddy_site_upstream: "thelounge:{{ thelounge_port }}"
   when: not ansible_check_mode

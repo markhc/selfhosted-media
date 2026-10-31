@@ -74,10 +74,9 @@ access policy. Leave `caddy_lan_ip: ""` for Tailscale-only access.
 
 Caddy's own Caddyfile defines the private listener and certificate settings
 once, as the `selfhosted_private` snippet, and imports every file in
-`/opt/selfhosted/caddy/conf/sites/`. A web service role starts its loopback-only
-container, then calls the caddy role's `site` tasks with a site name, hostname,
-and loopback upstream: usually `127.0.0.1:<port>`, or the service's own
-[media stack address](../media-stack.md#names-and-loopback-addresses).
+`/opt/selfhosted/caddy/conf/sites/`. A web service role starts its container on
+the shared network, then calls the caddy role's `site` tasks with a site name,
+hostname, and Docker DNS upstream.
 
 ```yaml
 - name: Publish Example through Caddy
@@ -87,7 +86,7 @@ and loopback upstream: usually `127.0.0.1:<port>`, or the service's own
   vars:
     caddy_site_name: example
     caddy_site_hostname: "{{ example_hostname }}"
-    caddy_site_upstream: "127.0.0.1:{{ example_port }}"
+    caddy_site_upstream: "example:{{ example_port }}"
 ```
 
 This writes `sites/<name>.caddy`, which always imports the private listener,
@@ -102,12 +101,12 @@ reload Caddy only if the file exists.
 
 ## Network exposure
 
-Host networking is deliberate: Caddy binds to the discovered Tailscale IPv4
-and, if configured, the explicit LAN IPv4 on 443, without Docker port
-publishing. Automatic HTTP redirects are disabled so no wildcard port 80
-listener is opened. Caddy handles WebSockets automatically. Its admin API binds
-only to localhost. These bindings do not replace the NAS's existing firewall for
-unrelated services.
+Caddy joins the shared bridge and Docker publishes its port 443 only on the
+discovered Tailscale IPv4 and, if configured, the explicit LAN IPv4. Automatic
+HTTP redirects are disabled so no port 80 listener is opened. Caddy handles
+WebSockets automatically. Its admin API binds only inside the container. Docker
+firewall rules are now part of the exposure boundary; see the
+[shared-network evaluation](../shared-network-experiment.md).
 
 Containers restart after reboot; Caddy retries if Tailscale's interface is not
 ready yet. Verify tailnet reachability and HTTPS after a NAS reboot.

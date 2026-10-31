@@ -77,8 +77,8 @@ redeploy; see [Container images](../operations.md#container-images). Audiobooksh
 
 ## Network exposure
 
-Audiobookshelf uses host networking but binds only to
-`127.0.0.1:13378`, without Docker port publishing. Caddy is the only listener
+Audiobookshelf joins the shared bridge as `audiobookshelf:13378`, without
+Docker port publishing. Caddy is the only listener
 reachable from the tailnet or LAN, on the Tailscale IPv4 and the optional
 `caddy_lan_ip`; see [Caddy network exposure](caddy.md#network-exposure).
 The supplied tailnet policy lets only tailnet administrators reach the NAS; see

@@ -57,5 +57,5 @@
   vars:
     caddy_site_name: prowlarr
     caddy_site_hostname: "{{ prowlarr_hostname }}"
-    caddy_site_upstream: "{{ prowlarr_listen_address }}:{{ prowlarr_port }}"
+    caddy_site_upstream: "prowlarr:{{ prowlarr_port }}"
   when: not ansible_check_mode

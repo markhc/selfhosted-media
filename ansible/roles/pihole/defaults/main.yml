@@ -4,7 +4,7 @@ pihole_image_repository: pihole/pihole
 pihole_image_tag: "2026.10.0"
 # Optional sha256 digest that pins the exact image, e.g. sha256:<64 hex digits>.
 pihole_image_digest: ""
-# Loopback port of the web interface behind Caddy.
+# Internal port of the web interface behind Caddy.
 pihole_port: 8053
 # The fixed private LAN IPv4 that answers DNS; defaults to Caddy's LAN listener.
 pihole_dns_address: "{{ caddy_lan_ip | default('') }}"

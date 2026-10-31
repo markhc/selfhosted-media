@@ -4,7 +4,10 @@ services:
   znc:
     image: {{ znc_image | to_json }}
     user: "{{ znc_uid | int }}:{{ znc_gid | int }}"
-    network_mode: host
+    networks:
+      - selfhosted
+    ports:
+      - "{{ znc_tailscale_ip.stdout | trim }}:{{ znc_port | int }}:{{ znc_port | int }}"
     init: true
     restart: unless-stopped
     read_only: true
@@ -26,9 +29,9 @@ services:
       - /tmp:size=8m,mode=1777
     healthcheck:
 {% if znc_tls_mode == 'cloudflare' %}
-      test: ["CMD-SHELL", "timeout 3 openssl s_client -connect {{ znc_tailscale_ip.stdout | trim }}:{{ znc_port | int }} -servername {{ znc_tls_hostname }} -verify_return_error -verify_hostname {{ znc_tls_hostname }} -brief -no_ign_eof </dev/null >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "timeout 3 openssl s_client -connect 127.0.0.1:{{ znc_port | int }} -servername {{ znc_tls_hostname }} -verify_return_error -verify_hostname {{ znc_tls_hostname }} -brief -no_ign_eof </dev/null >/dev/null 2>&1"]
 {% else %}
-      test: ["CMD-SHELL", "timeout 3 openssl s_client -connect {{ znc_tailscale_ip.stdout | trim }}:{{ znc_port | int }} -CAfile /znc-tls/server.crt -verify_return_error -verify_ip {{ znc_tailscale_ip.stdout | trim }} -brief -no_ign_eof </dev/null >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "timeout 3 openssl s_client -connect 127.0.0.1:{{ znc_port | int }} -CAfile /znc-tls/server.crt -verify_return_error -verify_ip {{ znc_tailscale_ip.stdout | trim }} -brief -no_ign_eof </dev/null >/dev/null 2>&1"]
 {% endif %}
       interval: 30s
       timeout: 5s
@@ -39,3 +42,7 @@ services:
       options:
         max-size: "1m"
         max-file: "2"
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

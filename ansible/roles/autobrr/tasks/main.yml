@@ -44,5 +44,5 @@
   vars:
     caddy_site_name: autobrr
     caddy_site_hostname: "{{ autobrr_hostname }}"
-    caddy_site_upstream: "{{ autobrr_listen_address }}:{{ autobrr_port }}"
+    caddy_site_upstream: "autobrr:{{ autobrr_port }}"
   when: not ansible_check_mode

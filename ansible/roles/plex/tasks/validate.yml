@@ -1,8 +1,4 @@
 ---
-- name: Resolve the media service addresses
-  ansible.builtin.include_role:
-    name: media_hosts
-
 - name: Validate the Plex configuration
   ansible.builtin.assert:
     that:

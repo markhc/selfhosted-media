@@ -100,8 +100,8 @@ a default 128 MiB memory ceiling. No build toolchain or scripting runtimes are
 installed on the host for ZNC. Override `znc_memory_limit` for larger workloads;
 the limit is not a guarantee that every configuration fits in 128 MiB.
 
-ZNC binds **only the discovered Tailscale IPv4**, never the public or LAN
-interface, using host networking without Docker port publishing. TCP 6697 is
+ZNC listens inside the shared bridge, and Docker publishes it **only on the
+discovered Tailscale IPv4**, never the public or LAN interface. TCP 6697 is
 IRC-only, **requires TLS**, and exposes no web administration interface.
 Tailscale adds authenticated, encrypted transport underneath IRC TLS. Public
 upstream IRC connections also require TLS. Changing `znc_port` also requires

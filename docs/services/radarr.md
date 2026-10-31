@@ -17,12 +17,10 @@ selfhosted_data_path: /srv/data
 caddy_enabled: true
 
 radarr_enabled: true
-radarr_instances:
+  radarr_instances:
   - name: hd
-    address: 127.10.2.1
     hostname: radarr.example.com
   - name: uhd
-    address: 127.10.2.2
     hostname: radarr-uhd.example.com
 
 # Encrypted vault (make vault-edit). `openssl rand -hex 16` prints a 32-character key.
@@ -40,8 +38,6 @@ Each instance needs:
 - `name`: lowercase letters, digits, and `-`, unique. The instance is called
   `radarr-<name>`, for example `radarr-uhd`, which is also the name other
   media services use to reach it.
-- `address`: a unique loopback address; see
-  [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses).
 - `hostname`: the HTTPS hostname served by Caddy.
 - An API key under its name in the vaulted `radarr_api_keys`: 32 lowercase
   hexadecimal characters, different for each instance.
@@ -50,7 +46,7 @@ Each instance needs:
 | --- | --- | --- |
 | `radarr_instances` | `[]` | Instances to deploy, at least one |
 | `radarr_api_keys` | none | Vaulted API key of each instance, keyed by name |
-| `radarr_port` | `7878` | Port of every instance on its own address |
+| `radarr_port` | `7878` | Internal port of every instance on the shared network |
 | `radarr_log_level` | `info` | `info`, `debug`, or `trace` |
 | `radarr_image_repository` / `_tag` / `_digest` | hotio image, pinned | See [Container images](../operations.md#container-images) |
 
@@ -64,11 +60,11 @@ Radarr keeps its settings in `config.xml` and its database, which Ansible
 never creates or overwrites. The container environment overrides these
 settings on every start, so changing them in the web UI has no effect:
 
-- Bind address and port: the instance's `address` and `radarr_port`.
+- Bind address `0.0.0.0` inside the container and port `radarr_port`.
 - SSL off and an empty URL base, because Caddy terminates TLS and proxies the
   hostname's root.
-- Allowed hosts: the instance's hostname, `radarr-<name>`, and its address.
-- Authentication required for every address. Caddy connects from loopback, so
+- Allowed hosts: the instance's hostname and `radarr-<name>`.
+- Authentication required for every address. Caddy connects from the bridge, so
   exempting local addresses would let everyone in.
 - The API key from the vault, through a root-only `api.env` file.
 - The log level.
@@ -159,13 +155,13 @@ cannot go back, so take a backup first.
 
 ## Network exposure
 
-Each instance uses host networking without Docker port publishing:
+Each instance joins the shared bridge without publishing a host port:
 
-- It listens only on its own address, port `7878`. Caddy publishes it at the
+- It is reachable as `radarr-<name>:7878`. Caddy publishes it at the
   instance hostname on its private listeners; see
   [Caddy network exposure](caddy.md#network-exposure).
-- It accepts requests only for its hostname, `radarr-<name>`, and its address,
-  plus `localhost` and the NAS's own hostname, which blocks DNS rebinding.
+- It accepts requests only for its hostname, `radarr-<name>`, `localhost`, and
+  the NAS's own hostname, which blocks DNS rebinding.
   Other `Host` headers get HTTP 400.
 - The web UI requires the login, and the API requires the instance's API key,
   also for requests from the NAS itself.

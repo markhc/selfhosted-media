@@ -39,8 +39,8 @@ self-signed bouncer certificate.
 
 ## Network exposure
 
-The Lounge runs in private mode with `reverseProxy: true` and binds only to
-`127.0.0.1:9000`, without Docker port publishing. Caddy is the only listener
+The Lounge runs in private mode with `reverseProxy: true` on the shared bridge
+as `thelounge:9000`, without Docker port publishing. Caddy is the only listener
 reachable from the tailnet or LAN.
 
 ## Data

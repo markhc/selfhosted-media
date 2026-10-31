@@ -1,9 +1,4 @@
 ---
-# Also validates each instance's name and unique loopback address.
-- name: Resolve the media service addresses
-  ansible.builtin.include_role:
-    name: media_hosts
-
 - name: Validate the Radarr configuration
   ansible.builtin.assert:
     that:
@@ -48,13 +43,20 @@
 - name: Validate the Radarr instances
   ansible.builtin.assert:
     that:
+      - radarr_instances is sequence
+      - radarr_instances is not string
+      - radarr_instances is not mapping
       - radarr_instances | length > 0
+      - radarr_instances | select('mapping') | list | length == radarr_instances | length
+      - radarr_instances | map(attribute='name', default='')
+        | select('match', '^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$') | unique | list | length
+        == radarr_instances | length
       - radarr_instances | map(attribute='hostname', default='')
         | select('match', '^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$') | unique | list | length
         == radarr_instances | length
     fail_msg: >-
-      Set radarr_instances to at least one instance, each with a unique hostname in a
-      DNS zone you control.
+      Set radarr_instances to at least one instance, each with a unique lowercase name
+      and a unique hostname in a DNS zone you control.
 
 - name: Validate the Radarr API keys
   ansible.builtin.assert:

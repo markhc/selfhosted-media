@@ -1,10 +1,11 @@
-# Managed by Ansible. Plex listens on every address of its own network namespace, so
-# Docker publishes it only on its loopback address, behind Caddy.
+# Managed by Ansible. Plex stays on the shared network behind Caddy.
 name: selfhosted-plex
 services:
   plex:
     image: {{ plex_image }}
     restart: unless-stopped
+    networks:
+      - selfhosted
     # The image's init starts as root to run Plex as PUID:PGID, add it to the groups of
     # the GPU devices, and write the advertised URL into Preferences.xml in /config.
     cap_drop:
@@ -16,9 +17,8 @@ services:
       - SETUID
     security_opt:
       - no-new-privileges:true
-    ports:
-      - "{{ plex_listen_address }}:{{ plex_port }}:32400"
 {% if plex_remote_access_port | int != 0 %}
+    ports:
       # Plex Remote Access: the router forwards this LAN port from the internet.
       - "{{ plex_remote_access_address }}:{{ plex_remote_access_port | int }}:32400"
 {% endif %}
@@ -72,3 +72,7 @@ services:
         read_only: {{ plex_data_read_only | to_json }}
         bind:
           create_host_path: false
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

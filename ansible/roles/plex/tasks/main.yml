@@ -91,5 +91,5 @@
   vars:
     caddy_site_name: plex
     caddy_site_hostname: "{{ plex_hostname }}"
-    caddy_site_upstream: "{{ plex_listen_address }}:{{ plex_port }}"
+    caddy_site_upstream: "plex:{{ plex_port }}"
   when: not ansible_check_mode

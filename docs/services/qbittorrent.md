@@ -5,7 +5,7 @@ client of the [media stack](../media-stack.md). It runs headless on the NAS
 with the official
 [qbittorrent-nox image](https://github.com/qbittorrent/docker-qbittorrent-nox),
 downloads into the shared data root, and exposes its WebUI and API on its own
-loopback address as `qbittorrent:8080` to the other media services. Caddy
+shared network as `qbittorrent:8080` to the other media services. Caddy
 publishes the WebUI at its own hostname. When [qui](qui.md) is selected, qui
 is the everyday interface and the WebUI remains a fallback.
 
@@ -41,7 +41,6 @@ hostname before deploying. See
 | --- | --- | --- |
 | `qbittorrent_webui_username` / `_password` | none | Vaulted WebUI login; the password needs at least 8 characters |
 | `qbittorrent_hostname` | none | HTTPS hostname of the WebUI |
-| `qbittorrent_address` | `127.10.0.1` | Loopback address of the WebUI and API; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
 | `qbittorrent_webui_port` | `8080` | WebUI and API port |
 | `qbittorrent_torrenting_port` | `6881` | Peer port on every interface (TCP and UDP) |
 | `qbittorrent_mounts` | `[]` | Additional host directories to mount; see [Additional mounts](#additional-mounts) |
@@ -75,10 +74,11 @@ qBittorrent rewrites its configuration file at runtime, so Ansible seeds
 only these WebUI settings, stopping the container first if any of them
 changed:
 
-- `Address` from `qbittorrent_address` and `Port` from `qbittorrent_webui_port`.
+- `Address=0.0.0.0` inside the container and `Port` from `qbittorrent_webui_port`.
 - `LocalHostAuth=true` and `AuthSubnetWhitelistEnabled=false`. Caddy and qui
-  connect from loopback, so a loopback or subnet bypass would remove the login.
-- `ReverseProxySupportEnabled=true` with `TrustedReverseProxiesList=127.0.0.1`.
+  connect through the bridge, so a local or subnet bypass would remove the login.
+- `ReverseProxySupportEnabled=true` with Caddy's fixed bridge address in
+  `TrustedReverseProxiesList`.
   Failed logins are then banned by client address instead of banning Caddy.
 - `Username` and `Password_PBKDF2` from the vault. Only the PBKDF2 hash reaches
   the NAS. Changing the vaulted password changes the WebUI login.
@@ -158,12 +158,12 @@ The container gets up to 30 minutes to stop so it can save resume data.
 
 ## Network exposure
 
-qBittorrent uses host networking without Docker port publishing:
+qBittorrent joins the shared bridge:
 
-- The WebUI and API listen only on `127.10.0.1:8080`. Caddy publishes them
+- The WebUI and API are available only as `qbittorrent:8080` on that bridge. Caddy publishes them
   at `qbittorrent_hostname` on its private listeners, also while qui is
   selected; see [Caddy network exposure](caddy.md#network-exposure).
-- The peer port listens on every host interface. It is reachable from the
+- Docker publishes the TCP and UDP peer port on every host interface. It is reachable from the
   internet when the router forwards it, which UPnP / NAT-PMP requests by
   default. Peer traffic does not go through Tailscale or a VPN.
 

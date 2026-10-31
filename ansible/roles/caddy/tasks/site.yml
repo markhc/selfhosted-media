@@ -1,5 +1,5 @@
 ---
-# Publishes a loopback service through Caddy. Callers set caddy_site_name,
+# Publishes a service on the shared Docker network through Caddy. Callers set caddy_site_name,
 # caddy_site_hostname, and caddy_site_upstream.
 - name: Validate the Caddy site for {{ caddy_site_name }}
   ansible.builtin.assert:
@@ -7,10 +7,12 @@
       - caddy_site_name is match('^[a-z0-9][a-z0-9_-]{0,63}$')
       - caddy_site_hostname is string
       - caddy_site_hostname is match('^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
-      - caddy_site_upstream is match('^127(?:\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}:[0-9]{4,5}$')
+      - caddy_site_upstream is match('^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?:[0-9]{1,5}$')
+      - caddy_site_upstream | split(':') | last | int > 0
+      - caddy_site_upstream | split(':') | last | int < 65536
     fail_msg: >-
       A Caddy site needs a lowercase name, a DNS hostname in a zone you control,
-      and a loopback upstream such as 127.0.0.1:8080 or 127.10.0.1:8080.
+      and a Docker DNS upstream such as audiobookshelf:13378 or sonarr-tv:8989.
 
 - name: Check that Caddy is deployed for {{ caddy_site_name }}
   ansible.builtin.stat:

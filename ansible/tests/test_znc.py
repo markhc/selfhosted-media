@@ -102,8 +102,8 @@ class ZncTests(unittest.TestCase):
     def test_private_small_container(self):
         service = yaml.safe_load((self.directory / "compose.yml").read_text())["services"]["znc"]
         self.assertEqual(service["image"], "znc:1.10.3-slim")
-        self.assertEqual(service["network_mode"], "host")
-        self.assertNotIn("ports", service)
+        self.assertEqual(service["networks"], ["selfhosted"])
+        self.assertEqual(service["ports"], ["100.100.100.100:6697:6697"])
         self.assertEqual(service["environment"], {"TZ": "UTC"})
         self.assertEqual(service["user"], "10000:10000")
         self.assertEqual(service["cap_drop"], ["ALL"])
@@ -119,7 +119,7 @@ class ZncTests(unittest.TestCase):
     def test_managed_config_and_bounded_durable_buffers(self):
         config = (self.directory / "znc.conf").read_text()
         self.assertEqual(config.count("<Listener "), 1)
-        self.assertIn("Host = 100.100.100.100", config)
+        self.assertIn("Host = 0.0.0.0", config)
         self.assertIn("IPv6 = false", config)
         self.assertIn("SSL = true", config)
         self.assertIn("SSLCertFile = /znc-tls/server.crt", config)

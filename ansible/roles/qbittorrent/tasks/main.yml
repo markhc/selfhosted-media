@@ -85,5 +85,5 @@
   vars:
     caddy_site_name: qbittorrent
     caddy_site_hostname: "{{ qbittorrent_hostname }}"
-    caddy_site_upstream: "{{ qbittorrent_webui_address }}:{{ qbittorrent_webui_port }}"
+    caddy_site_upstream: "qbittorrent:{{ qbittorrent_webui_port }}"
   when: not ansible_check_mode

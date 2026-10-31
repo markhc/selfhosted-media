@@ -61,5 +61,5 @@
   vars:
     caddy_site_name: pihole
     caddy_site_hostname: "{{ pihole_hostname }}"
-    caddy_site_upstream: "127.0.0.1:{{ pihole_port }}"
+    caddy_site_upstream: "pihole:{{ pihole_port }}"
   when: not ansible_check_mode

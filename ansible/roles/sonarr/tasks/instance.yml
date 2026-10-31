@@ -54,5 +54,5 @@
   vars:
     caddy_site_name: "{{ sonarr_instance_name }}"
     caddy_site_hostname: "{{ sonarr_instance.hostname }}"
-    caddy_site_upstream: "{{ sonarr_instance.address }}:{{ sonarr_port }}"
+    caddy_site_upstream: "{{ sonarr_instance_name }}:{{ sonarr_port }}"
   when: not ansible_check_mode

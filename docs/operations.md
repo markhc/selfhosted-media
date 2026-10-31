@@ -15,6 +15,9 @@ them explicitly with Compose on the host if they were already deployed.
   Sonarr and Radarr instance is its own project, such as `selfhosted-sonarr-tv`
   with the Caddy site `sonarr-tv.caddy`, and removing it from the instance
   list leaves it running in the same way.
+- These projects share the external `selfhosted` bridge; see the
+  [shared-network evaluation](shared-network-experiment.md). Tailscale remains
+  host-networked.
 - Disabling a web service leaves its container and its Caddy site running. To
   remove it, stop its project, delete
   `/opt/selfhosted/caddy/conf/sites/<service>.caddy`, and run

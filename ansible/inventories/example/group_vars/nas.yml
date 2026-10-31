@@ -62,8 +62,6 @@ qbittorrent_image_repository: qbittorrentofficial/qbittorrent-nox
 qbittorrent_image_tag: "5.2.4-1"
 # Set to true after reading qBittorrent's legal notice in docs/services/qbittorrent.md.
 qbittorrent_confirm_legal_notice: false
-# Each media service listens on its own loopback address; see docs/media-stack.md.
-# qbittorrent_address: 127.10.0.1
 # qbittorrent_webui_port: 8080
 # It is recommended you change the torrenting port from the default 6881 to avoid ISP throttling.
 # qbittorrent_torrenting_port: 6881
@@ -78,7 +76,6 @@ qbittorrent_mounts: []
 qui_enabled: false
 qui_image_repository: ghcr.io/autobrr/qui
 qui_image_tag: "v1.33.1"
-# qui_address: 127.10.0.2
 # qui_port: 7476
 # qui sees the shared data root and qbittorrent_mounts at the same paths as qBittorrent.
 # qui_mounts: []
@@ -88,7 +85,6 @@ autobrr_enabled: false
 autobrr_image_repository: ghcr.io/autobrr/autobrr
 autobrr_image_tag: "v1.89.0"
 autobrr_hostname: autobrr.example.com
-# autobrr_address: 127.10.0.4
 # autobrr_port: 7474
 
 # --- Prowlarr (docs/services/prowlarr.md); indexer manager for Sonarr and Radarr ---
@@ -96,36 +92,31 @@ autobrr_hostname: autobrr.example.com
 prowlarr_enabled: false
 prowlarr_image_repository: ghcr.io/hotio/prowlarr
 prowlarr_image_tag: "release-2.6.5.5623"
-# prowlarr_address: 127.10.0.3
 
 # --- Sonarr (docs/services/sonarr.md); one Compose project and Caddy site per instance ---
 sonarr_enabled: false
 sonarr_image_repository: ghcr.io/hotio/sonarr
 sonarr_image_tag: "release-4.0.20.3014"
-# Each instance needs a unique name, loopback address, and hostname, plus an API key
+# Each instance needs a unique name and hostname, plus an API key
 # under its name in the vaulted sonarr_api_keys. Removing an instance leaves it running.
 sonarr_instances: []
 # sonarr_instances:
 #   - name: tv
-#     address: 127.10.1.1
 #     hostname: sonarr.example.com
 #   - name: anime
-#     address: 127.10.1.2
 #     hostname: anime.example.com
 
 # --- Radarr (docs/services/radarr.md); one Compose project and Caddy site per instance ---
 radarr_enabled: false
 radarr_image_repository: ghcr.io/hotio/radarr
 radarr_image_tag: "release-6.4.4.10685"
-# Each instance needs a unique name, loopback address, and hostname, plus an API key
+# Each instance needs a unique name and hostname, plus an API key
 # under its name in the vaulted radarr_api_keys. Removing an instance leaves it running.
 radarr_instances: []
 # radarr_instances:
 #   - name: hd
-#     address: 127.10.2.1
 #     hostname: radarr.example.com
 #   - name: uhd
-#     address: 127.10.2.2
 #     hostname: radarr-uhd.example.com
 
 # --- Plex (docs/services/plex.md); media server for the libraries under the shared data root ---
@@ -133,7 +124,6 @@ plex_enabled: false
 plex_image_repository: ghcr.io/hotio/plex
 plex_image_tag: "release-1.43.5.11079-b3b13e506"
 plex_hostname: plex.example.com
-# plex_address: 127.10.0.5
 # Hardware transcoding (needs Plex Pass): none, dri for Intel Quick Sync or AMD VA-API,
 # or nvidia for NVENC (needs the NVIDIA driver and Container Toolkit on the NAS).
 # plex_hardware_acceleration: dri

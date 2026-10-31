@@ -32,8 +32,7 @@ no media files, so it does not need `selfhosted_data_path`.
 | --- | --- | --- |
 | `prowlarr_hostname` | none | HTTPS hostname served by Caddy |
 | `prowlarr_api_key` | none | Vaulted API key, 32 lowercase hexadecimal characters |
-| `prowlarr_address` | `127.10.0.3` | Loopback address; see [Names and loopback addresses](../media-stack.md#names-and-loopback-addresses) |
-| `prowlarr_port` | `9696` | Port on that address |
+| `prowlarr_port` | `9696` | Internal port on the shared network |
 | `prowlarr_log_level` | `info` | `info`, `debug`, or `trace` |
 | `prowlarr_image_repository` / `_tag` / `_digest` | hotio image, pinned | See [Container images](../operations.md#container-images) |
 
@@ -46,11 +45,11 @@ Prowlarr keeps its settings in `config.xml` and its database, which Ansible
 never creates or overwrites. The container environment overrides these
 settings on every start, so changing them in the web UI has no effect:
 
-- Bind address and port: `prowlarr_address` and `prowlarr_port`.
+- Bind address `0.0.0.0` inside the container and port `prowlarr_port`.
 - SSL off and an empty URL base, because Caddy terminates TLS and proxies the
   hostname's root.
-- Allowed hosts: `prowlarr_hostname`, `prowlarr`, and its address.
-- Authentication required for every address. Caddy connects from loopback, so
+- Allowed hosts: `prowlarr_hostname` and `prowlarr`.
+- Authentication required for every address. Caddy connects from the bridge, so
   exempting local addresses would let everyone in.
 - The API key from the vault, through a root-only `api.env` file.
 - The log level.
@@ -137,7 +136,7 @@ with this deployment. The general steps are in
    updates the indexers in each instance.
 
 Sonarr and Radarr instances still running in the old stack cannot reach the
-new Prowlarr, which listens only on loopback, so their synced indexers fail
+new Prowlarr, which is reachable only on the shared bridge, so their synced indexers fail
 until they are migrated. Move them right after Prowlarr.
 
 ## Deploy
@@ -154,13 +153,13 @@ cannot go back, so take a backup first.
 
 ## Network exposure
 
-Prowlarr uses host networking without Docker port publishing:
+Prowlarr joins the shared bridge without publishing a host port:
 
-- It listens only on `prowlarr_address`, port `9696`. Caddy publishes it at
+- It is reachable as `prowlarr:9696`. Caddy publishes it at
   `prowlarr_hostname` on its private listeners; see
   [Caddy network exposure](caddy.md#network-exposure).
-- It accepts requests only for `prowlarr_hostname`, `prowlarr`, and its
-  address, plus `localhost` and the NAS's own hostname, which blocks DNS
+- It accepts requests only for `prowlarr_hostname`, `prowlarr`, `localhost`,
+  and the NAS's own hostname, which blocks DNS
   rebinding. Other `Host` headers get HTTP 400.
 - The web UI requires the login, and the API requires the vaulted API key,
   also for requests from the NAS itself.

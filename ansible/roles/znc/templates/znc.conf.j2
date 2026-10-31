@@ -6,7 +6,7 @@ SSLCertFile = /znc-tls/{{ 'acme.pem' if znc_tls_mode == 'cloudflare' else 'serve
 SSLKeyFile = /znc-tls/{{ 'acme.pem' if znc_tls_mode == 'cloudflare' else 'server.key' }}
 
 <Listener tailscale>
-    Host = {{ znc_tailscale_ip.stdout | trim }}
+    Host = 0.0.0.0
     Port = {{ znc_port | int }}
     IPv4 = true
     IPv6 = false

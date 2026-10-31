@@ -35,15 +35,16 @@ class AudiobookshelfTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_loopback_only_and_unprivileged(self):
+    def test_shared_network_only_and_unprivileged(self):
         self.assertEqual(self.compose["name"], "selfhosted-audiobookshelf")
         service = self.compose["services"]["audiobookshelf"]
         self.assertEqual(service["image"], "ghcr.io/advplyr/audiobookshelf:2.37.2")
-        self.assertEqual(service["network_mode"], "host")
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
-        self.assertEqual(service["environment"], {"HOST": "127.0.0.1", "PORT": "13378", "TZ": "UTC"})
+        self.assertEqual(service["environment"], {"HOST": "0.0.0.0", "PORT": "13378", "TZ": "UTC"})
         self.assertIn("http://127.0.0.1:13378/healthcheck", service["healthcheck"]["test"][3])
+        self.assertEqual(self.compose["networks"]["selfhosted"], {"external": True, "name": "selfhosted"})
 
     def test_libraries_are_explicit_bind_mounts(self):
         volumes = self.compose["services"]["audiobookshelf"]["volumes"]

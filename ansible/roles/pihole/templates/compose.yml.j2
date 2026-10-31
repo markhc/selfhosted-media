@@ -1,10 +1,14 @@
-# Managed by Ansible. Pi-hole answers DNS on the LAN address only, and its web
-# interface listens on loopback only, behind Caddy.
+# Managed by Ansible. Docker publishes DNS on the LAN address only; the web UI
+# stays on the shared network behind Caddy.
 name: selfhosted-pihole
 services:
   pihole:
     image: {{ pihole_image }}
-    network_mode: host
+    networks:
+      - selfhosted
+    ports:
+      - "{{ pihole_dns_address }}:53:53/tcp"
+      - "{{ pihole_dns_address }}:53:53/udp"
     restart: unless-stopped
     # The image's start script runs as root to prepare /etc/pihole, then grants
     # pihole-FTL file capabilities and runs it as the pihole user. Gaining those
@@ -29,20 +33,17 @@ services:
       PIHOLE_GID: "{{ pihole_gid }}"
       TZ: {{ pihole_timezone | to_json }}
       # FTLCONF_ settings override pihole.toml on every start and are read-only in the web interface.
-      # Answer DNS only on the LAN address, never on Tailscale, Docker, or loopback
-      # interfaces; bind-dynamic also binds it when it appears after a boot.
-      FTLCONF_dns_listeningMode: NONE
-      FTLCONF_misc_dnsmasq_lines: "listen-address={{ pihole_dns_address }};bind-dynamic"
+      # Docker limits host exposure to the selected LAN address.
+      FTLCONF_dns_listeningMode: ALL
       FTLCONF_dns_upstreams: {{ pihole_upstreams | join(';') | to_json }}
       FTLCONF_dns_hostRecord: {{ pihole_host_record | to_json }}
-      # Plain HTTP on loopback only: no HTTPS listener to collide with Caddy on 443.
-      FTLCONF_webserver_port: "127.0.0.1:{{ pihole_port }}"
+      # Plain HTTP inside the shared network; Caddy owns host port 443.
+      FTLCONF_webserver_port: "0.0.0.0:{{ pihole_port }}"
       FTLCONF_webserver_domain: {{ pihole_hostname | to_json }}
       # The NAS keeps its own clock: no NTP server, and no clock changes.
       FTLCONF_ntp_ipv4_active: "false"
       FTLCONF_ntp_ipv6_active: "false"
       FTLCONF_ntp_sync_active: "false"
-    # The image's own check queries 127.0.0.1, where Pi-hole does not listen.
     healthcheck:
       test:
         - CMD
@@ -50,7 +51,7 @@ services:
         - +short
         - +norecurse
         - +retry=0
-        - "@{{ pihole_dns_address }}"
+        - "@127.0.0.1"
         - pi.hole
       interval: 10s
       timeout: 5s
@@ -61,3 +62,7 @@ services:
 secrets:
   webpassword:
     file: ./webpassword
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

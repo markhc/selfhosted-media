@@ -13,7 +13,7 @@ SETTINGS = {
     "caddy_enabled": True,
     "plex_enabled": True,
     "sonarr_enabled": True,
-    "sonarr_instances": [{"name": "tv", "address": "127.10.1.1", "hostname": "sonarr.example.com"}],
+    "sonarr_instances": [{"name": "tv", "hostname": "sonarr.example.com"}],
     "plex_hostname": "plex.example.com",
     "selfhosted_data_path": "/srv/example data/$media",
 }
@@ -45,14 +45,13 @@ class PlexTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_published_only_on_its_loopback_address(self):
+    def test_available_only_on_the_shared_network(self):
         self.assertEqual(self.compose["name"], "selfhosted-plex")
         service = self.compose["services"]["plex"]
         self.assertEqual(service["image"], "ghcr.io/hotio/plex:release-1.43.5.11079-b3b13e506")
-        # Plex binds every address, so it gets its own network namespace instead of the host's.
         self.assertNotIn("network_mode", service)
-        self.assertEqual(service["ports"], ["127.10.0.5:32400:32400"])
-        # It never connects to its peers.
+        self.assertNotIn("ports", service)
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("extra_hosts", service)
         self.assertEqual(service["healthcheck"]["test"][-1], "http://127.0.0.1:32400/identity")
 
@@ -92,20 +91,20 @@ class PlexTests(unittest.TestCase):
     def test_remote_access_publishes_only_on_the_lan_address(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
             service = render(temp, {**SETTINGS, "caddy_lan_ip": "192.168.50.10", "plex_remote_access_port": 12345})
-            self.assertEqual(service["ports"], ["127.10.0.5:32400:32400", "192.168.50.10:12345:32400"])
+            self.assertEqual(service["ports"], ["192.168.50.10:12345:32400"])
             service = render(temp, {**SETTINGS, "caddy_lan_ip": "192.168.50.10", "plex_remote_access_port": "32400",
                                     "plex_remote_access_address": "10.0.0.20"})
-            self.assertEqual(service["ports"], ["127.10.0.5:32400:32400", "10.0.0.20:32400:32400"])
+            self.assertEqual(service["ports"], ["10.0.0.20:32400:32400"])
         # Off by default, even with a LAN address.
-        self.assertEqual(self.compose["services"]["plex"]["ports"], ["127.10.0.5:32400:32400"])
+        self.assertNotIn("ports", self.compose["services"]["plex"])
 
     def test_settings_can_be_overridden(self):
-        settings = {**SETTINGS, "plex_address": "127.10.9.9", "selfhosted_data_uid": 1001,
+        settings = {**SETTINGS, "selfhosted_data_uid": 1001,
                     "selfhosted_data_container_path": "/media", "plex_data_read_only": False,
                     "plex_timezone": "America/Sao_Paulo"}
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
             service = render(temp, settings)
-        self.assertEqual(service["ports"], ["127.10.9.9:32400:32400"])
+        self.assertNotIn("ports", service)
         self.assertEqual((service["environment"]["PUID"], service["environment"]["TZ"]),
                          ("1001", "America/Sao_Paulo"))
         self.assertEqual(service["volumes"][1]["target"], "/media")
@@ -116,7 +115,7 @@ class PlexTests(unittest.TestCase):
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"], {
             "caddy_site_name": "plex", "caddy_site_hostname": "{{ plex_hostname }}",
-            "caddy_site_upstream": "{{ plex_listen_address }}:{{ plex_port }}"})
+            "caddy_site_upstream": "plex:{{ plex_port }}"})
 
     def test_hardware_prerequisites_are_checked_only_when_selected(self):
         role_tasks = tasks()
@@ -135,8 +134,6 @@ class PlexTests(unittest.TestCase):
             {"plex_data_read_only": "yes"},
             {"plex_hardware_acceleration": "intel"},
             {"plex_hardware_acceleration": True},
-            {"plex_address": "127.0.0.1"},
-            {"plex_address": "127.10.1.1"},
             {"selfhosted_data_container_path": "/config"},
             {"selfhosted_data_container_path": "/app/media"},
             # Remote access needs an unprivileged port and an RFC1918 LAN address.

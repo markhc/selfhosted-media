@@ -66,5 +66,5 @@
   vars:
     caddy_site_name: audiobookshelf
     caddy_site_hostname: "{{ audiobookshelf_hostname }}"
-    caddy_site_upstream: "127.0.0.1:{{ audiobookshelf_port }}"
+    caddy_site_upstream: "audiobookshelf:{{ audiobookshelf_port }}"
   when: not ansible_check_mode

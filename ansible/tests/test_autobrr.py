@@ -38,11 +38,11 @@ class AutobrrTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def test_loopback_only_unprivileged_and_hardened(self):
+    def test_shared_network_only_unprivileged_and_hardened(self):
         self.assertEqual(self.compose["name"], "selfhosted-autobrr")
         service = self.compose["services"]["autobrr"]
         self.assertEqual(service["image"], "ghcr.io/autobrr/autobrr:v1.89.0")
-        self.assertEqual(service["network_mode"], "host")
+        self.assertEqual(service["networks"], ["selfhosted"])
         self.assertNotIn("ports", service)
         self.assertEqual(service["user"], "1000:1000")
         self.assertTrue(service["read_only"])
@@ -51,24 +51,23 @@ class AutobrrTests(unittest.TestCase):
         self.assertEqual(service["tmpfs"], ["/tmp"])
         self.assertEqual(service["volumes"], ["./config:/config"])
         self.assertEqual(service["environment"], {
-            "AUTOBRR__HOST": "127.10.0.4", "AUTOBRR__PORT": "7474",
+            "AUTOBRR__HOST": "0.0.0.0", "AUTOBRR__PORT": "7474",
             "AUTOBRR__CORS_ALLOWED_ORIGINS": "https://autobrr.example.com",
             "AUTOBRR__LOG_LEVEL": "INFO", "AUTOBRR__CHECK_FOR_UPDATES": "false", "TZ": "UTC"})
         self.assertEqual(service["healthcheck"]["test"][-1],
-                         "http://127.10.0.4:7474/api/healthz/readiness")
-        self.assertEqual(service["extra_hosts"], ["autobrr:127.10.0.4", "qbittorrent:127.10.0.1"])
+                         "http://127.0.0.1:7474/api/healthz/readiness")
+        self.assertNotIn("extra_hosts", service)
 
-    def test_address_and_runtime_settings_can_be_overridden(self):
+    def test_runtime_settings_can_be_overridden(self):
         with tempfile.TemporaryDirectory(dir=TEMP_ROOT) as temp:
-            service = render(temp, {**SETTINGS, "autobrr_address": "127.10.9.9", "autobrr_port": 7500,
+            service = render(temp, {**SETTINGS, "autobrr_port": 7500,
                                     "autobrr_log_level": "DEBUG", "autobrr_timezone": "America/Sao_Paulo",
                                     "autobrr_uid": 1001, "autobrr_gid": 1002})
         self.assertEqual(service["user"], "1001:1002")
-        self.assertEqual(service["environment"]["AUTOBRR__HOST"], "127.10.9.9")
+        self.assertEqual(service["environment"]["AUTOBRR__HOST"], "0.0.0.0")
         self.assertEqual(service["environment"]["AUTOBRR__PORT"], "7500")
         self.assertEqual(service["environment"]["AUTOBRR__LOG_LEVEL"], "DEBUG")
         self.assertEqual(service["environment"]["TZ"], "America/Sao_Paulo")
-        self.assertIn("autobrr:127.10.9.9", service["extra_hosts"])
 
     def test_published_through_caddy(self):
         tasks = {task["name"]: task for task in yaml.safe_load(
@@ -77,7 +76,7 @@ class AutobrrTests(unittest.TestCase):
         self.assertEqual(publish["ansible.builtin.include_role"]["tasks_from"], "site")
         self.assertEqual(publish["vars"], {
             "caddy_site_name": "autobrr", "caddy_site_hostname": "{{ autobrr_hostname }}",
-            "caddy_site_upstream": "{{ autobrr_listen_address }}:{{ autobrr_port }}"})
+            "caddy_site_upstream": "autobrr:{{ autobrr_port }}"})
 
     def test_invalid_inputs_fail(self):
         cases = [
@@ -89,8 +88,6 @@ class AutobrrTests(unittest.TestCase):
             {"autobrr_gid": 0},
             {"autobrr_timezone": "../etc/passwd"},
             {"autobrr_directory": "relative/path"},
-            {"autobrr_address": "127.0.0.1"},
-            {"autobrr_address": "127.10.0.1"},
         ]
         assert_cases_fail_validation(self, self.directory, SETTINGS, cases, [validate_task("autobrr")])
 

@@ -1,9 +1,10 @@
-# Managed by Ansible. autobrr listens on its own loopback address only, behind Caddy.
+# Managed by Ansible. autobrr is reachable only through the shared network.
 name: selfhosted-autobrr
 services:
   autobrr:
     image: {{ autobrr_image }}
-    network_mode: host
+    networks:
+      - selfhosted
     restart: unless-stopped
     user: "{{ autobrr_uid }}:{{ autobrr_gid }}"
     read_only: true
@@ -13,11 +14,6 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp
-    # Peers in the media stack, by name.
-    extra_hosts:
-{% for name, address in media_hosts_addresses | dictsort %}
-      - "{{ name }}:{{ address }}"
-{% endfor %}
     environment:
       AUTOBRR__HOST: {{ autobrr_listen_address | to_json }}
       AUTOBRR__PORT: "{{ autobrr_port }}"
@@ -36,10 +32,14 @@ services:
         - "5"
         - --output
         - /dev/null
-        - http://{{ autobrr_listen_address }}:{{ autobrr_port }}/api/healthz/readiness
+        - http://127.0.0.1:{{ autobrr_port }}/api/healthz/readiness
       interval: 10s
       timeout: 10s
       retries: 6
       start_period: 30s
     volumes:
       - ./config:/config
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted

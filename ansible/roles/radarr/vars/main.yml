@@ -9,8 +9,7 @@ radarr_instance_name: radarr-{{ radarr_instance.name }}
 radarr_instance_directory: "{{ radarr_deployment_root }}/{{ radarr_instance_name }}"
 
 # Host headers Radarr accepts besides its built-in localhost names: Caddy passes the
-# public hostname, and media services connect by name or address.
+# public hostname, and media services connect by Docker DNS name.
 radarr_allowed_hosts:
   - "{{ radarr_instance.hostname }}"
   - "{{ radarr_instance_name }}"
-  - "{{ radarr_instance.address }}"

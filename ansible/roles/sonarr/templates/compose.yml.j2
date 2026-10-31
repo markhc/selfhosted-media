@@ -1,9 +1,10 @@
-# Managed by Ansible. {{ sonarr_instance_name }} listens on its own loopback address only, behind Caddy.
+# Managed by Ansible. {{ sonarr_instance_name }} is reachable only through the shared network.
 name: selfhosted-{{ sonarr_instance_name }}
 services:
-  sonarr:
+  {{ sonarr_instance_name }}:
     image: {{ sonarr_image }}
-    network_mode: host
+    networks:
+      - selfhosted
     restart: unless-stopped
     # The image's init starts as root only to run Sonarr as PUID:PGID and own /config.
     cap_drop:
@@ -14,22 +15,17 @@ services:
       - SETUID
     security_opt:
       - no-new-privileges:true
-    # Peers in the media stack, by name.
-    extra_hosts:
-{% for name, address in media_hosts_addresses | dictsort %}
-      - "{{ name }}:{{ address }}"
-{% endfor %}
     env_file:
       - ./api.env
     # These settings override config.xml on every start.
     environment:
-      SONARR__SERVER__BINDADDRESS: {{ sonarr_instance.address | to_json }}
+      SONARR__SERVER__BINDADDRESS: 0.0.0.0
       SONARR__SERVER__PORT: "{{ sonarr_port }}"
       # Caddy terminates TLS and proxies the hostname's root.
       SONARR__SERVER__ENABLESSL: "false"
       SONARR__SERVER__URLBASE: ""
       SONARR__SERVER__ALLOWEDHOSTS: {{ sonarr_allowed_hosts | join(',') | to_json }}
-      # Caddy connects from loopback, which must not bypass the login.
+      # Caddy connects from the shared network, which must not bypass the login.
       SONARR__AUTH__REQUIRED: Enabled
       SONARR__LOG__LEVEL: {{ sonarr_log_level | to_json }}
       PUID: "{{ sonarr_uid }}"
@@ -46,7 +42,7 @@ services:
         - "5"
         - --output
         - /dev/null
-        - http://{{ sonarr_instance.address }}:{{ sonarr_port }}/ping
+        - http://127.0.0.1:{{ sonarr_port }}/ping
       interval: 10s
       timeout: 10s
       retries: 6
@@ -58,3 +54,7 @@ services:
         target: {{ sonarr_data_container_path | to_json }}
         bind:
           create_host_path: false
+networks:
+  selfhosted:
+    external: true
+    name: selfhosted
